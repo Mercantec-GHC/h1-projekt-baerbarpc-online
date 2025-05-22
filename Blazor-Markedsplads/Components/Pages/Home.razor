@@ -1,13 +1,49 @@
 ﻿@page "/"
-
+@using BlazorMarkedsplads.Models
 @inject DBService DBService
+@rendermode InteractiveServer
 
-<p>@(isConnected ? "Connected to the database" : "Not connected to the database")</p>
+@if (isConnected)
+{
+    <p>Connected to the database</p>
+}
+else
+{
+    <p>Not connected to the database</p>
+}
+
+<button @onclick="SetupUserTable">Setup User Table</button>
+<p>@result</p>
+
+<button @onclick="GetUsers">Get Users</button>
+<ul>
+    @foreach (var user in users)
+    {
+        <li>
+            <strong>@user.Name</strong> –
+            @user.Email –
+            @user.Password -
+            @user.Phone -
+            @user.Address -
+            @user.City - 
+            @user.ZipCode -
+
+
+        </li>
+    }
+</ul>
 
 @code {
-    bool isConnected = false;
+    private bool isConnected;
+    private string result = "";
+    private List<Users> users = new();
+
     protected override async Task OnInitializedAsync()
-    {
-        isConnected = await DBService.TestConnectionAsync();
-    }
+        => isConnected = await DBService.TestConnectionAsync();
+
+    private async Task SetupUserTable()
+        => result = await DBService.SetupUserTable();
+
+    private async Task GetUsers()
+        => users = await DBService.GetAllUsers();
 }
