@@ -293,3 +293,6 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml 
+
+appsettings.json
+appsettings.development.json

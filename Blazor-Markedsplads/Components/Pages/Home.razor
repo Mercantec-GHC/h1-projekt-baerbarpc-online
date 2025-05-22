@@ -1,7 +1,13 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+@inject DBService DBService
 
-<h1>Hello, world!</h1>
+<p>@(isConnected ? "Connected to the database" : "Not connected to the database")</p>
 
-Welcome to your new app.
+@code {
+    bool isConnected = false;
+    protected override async Task OnInitializedAsync()
+    {
+        isConnected = await DBService.TestConnectionAsync();
+    }
+}

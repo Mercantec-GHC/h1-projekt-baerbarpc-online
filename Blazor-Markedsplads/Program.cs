@@ -1,10 +1,23 @@
 using Blazor_Markedsplads.Components;
+using BlazorMarkedsplads.Services;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddScoped<DBService>();
+
+
+
+
+
+
+
+
 
 var app = builder.Build();
 
