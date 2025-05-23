@@ -3,47 +3,77 @@
 @inject DBService DBService
 @rendermode InteractiveServer
 
+<h3>Users</h3>
+
 @if (isConnected)
 {
-    <p>Connected to the database</p>
+    <p class="text-success">Connected to the database</p>
 }
 else
 {
-    <p>Not connected to the database</p>
+    <p class="text-danger">Not connected to the database</p>
 }
 
-<button @onclick="SetupUserTable">Setup User Table</button>
-<p>@result</p>
+<button class="btn btn-primary" @onclick="SetupUserTable">Setup User Table</button>
+<p>@userResult</p>
+<button class="btn btn-secondary" @onclick="GetUsers">Get Users</button>
 
-<button @onclick="GetUsers">Get Users</button>
-<ul>
+<ul class="list-group mt-2">
     @foreach (var user in users)
     {
-        <li>
-            <strong>@user.Name</strong> –
-            @user.Email –
-            @user.Password -
-            @user.Phone -
-            @user.Address -
-            @user.City - 
-            @user.ZipCode -
+        <li class="list-group-item">
+            <strong>@user.Name</strong><br />
+            @user.Email – @user.Phone<br />
+            @user.Address, @user.City @user.ZipCode
+        </li>
+    }
+</ul>
 
+<hr />
 
+<h3>Product Models</h3>
+
+<button class="btn btn-primary" @onclick="SetupProductModelsTable">Setup ProductModels Table</button>
+<p>@modelResult</p>
+<button class="btn btn-secondary" @onclick="GetProductModels">Get ProductModels</button>
+
+<ul class="list-group mt-2">
+    @foreach (var m in productModels)
+    {
+        <li class="list-group-item">
+            <strong>@m.Brand @m.Model</strong><br />
+            GPU: @m.Gpu · CPU: @m.Cpu · RAM: @m.Ram<br />
+            Storage: @m.Storage · OS: @m.OS<br />
+            Price: @m.Price · Screen: @m.ScreenSize · Condition: @m.Condition
         </li>
     }
 </ul>
 
 @code {
     private bool isConnected;
-    private string result = "";
-    private List<Users> users = new();
+
+    // Users
+    private string userResult = "";
+    private List<User> users = new();
+
+    // ProductModels
+    private string modelResult = "";
+    private List<ProductModel> productModels = new();
 
     protected override async Task OnInitializedAsync()
         => isConnected = await DBService.TestConnectionAsync();
 
+    // Users-handlers
     private async Task SetupUserTable()
-        => result = await DBService.SetupUserTable();
+        => userResult = await DBService.SetupUserTable();
 
     private async Task GetUsers()
         => users = await DBService.GetAllUsers();
+
+    // ProductModels-handlers
+    private async Task SetupProductModelsTable()
+        => modelResult = await DBService.SetupProductModelsTable();
+
+    private async Task GetProductModels()
+        => productModels = await DBService.GetAllProductModels();
 }
