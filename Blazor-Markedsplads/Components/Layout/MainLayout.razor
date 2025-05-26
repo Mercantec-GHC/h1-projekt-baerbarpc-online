@@ -1,13 +1,22 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <div class="top-row px-4 d-flex justify-content-end gap-3">
+            <!-- Ny Home-knap -->
+            <NavLink class="nav-link" href="/" ActiveClass="active">
+                Home
+            </NavLink>
+
+            <!-- Eksisterende Database-link -->
+            <NavLink class="nav-link" href="/database" ActiveClass="active">
+                Database
+            </NavLink>
+
+            <!-- Eksisterende About-link -->
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">
+                About
+            </a>
         </div>
 
         <article class="content px-4">
