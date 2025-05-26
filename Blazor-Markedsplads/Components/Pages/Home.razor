@@ -1,79 +1,220 @@
 ﻿@page "/"
 @using BlazorMarkedsplads.Models
-@inject DBService DBService
-@rendermode InteractiveServer
+@inject NavigationManager NavManager
+@inject DBService DbService
 
-<h3>Users</h3>
+<PageTitle>LaptopMarket – Forside</PageTitle>
 
-@if (isConnected)
-{
-    <p class="text-success">Connected to the database</p>
-}
-else
-{
-    <p class="text-danger">Not connected to the database</p>
-}
+<!-- =========  Top Navigation ========= -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
+            <i class="bi bi-laptop"></i>
+            LaptopMarket
+        </a>
 
-<button class="btn btn-primary" @onclick="SetupUserTable">Setup User Table</button>
-<p>@userResult</p>
-<button class="btn btn-secondary" @onclick="GetUsers">Get Users</button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-<ul class="list-group mt-2">
-    @foreach (var user in users)
-    {
-        <li class="list-group-item">
-            <strong>@user.Name</strong><br />
-            @user.Email – @user.Phone<br />
-            @user.Address, @user.City @user.ZipCode
-        </li>
-    }
-</ul>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/ListingsPage" ActiveClass="active">Annoncer</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/account" ActiveClass="active">Konto</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/about" ActiveClass="active">About</NavLink>
+                </li>
+                <li class="nav-item">
+                    <button type="button" class="btn btn-primary px-4" @onclick="NavigateLogin">
+                        Log ind
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
-<hr />
+<!-- =========  Hero Section ========= -->
+<section class="hero-section py-5 bg-light border-bottom">
+    <div class="container text-center">
+        <h1 class="display-5 fw-bold">Find Din Perfekte Bærbar</h1>
+        <p class="lead text-muted mx-auto" style="max-width: 600px;">
+            Gennemse tusindvis af bærbare computere fra pålidelige sælgere. Find præcis hvad du har brug for til den bedste pris.
+        </p>
 
-<h3>Product Models</h3>
+        <!-- Search input -->
+        <div class="d-flex justify-content-center mt-4">
+            <div class="input-group search-input" style="max-width: 600px;">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input
+                    class="form-control border-start-0"
+                    placeholder="Søg efter mærke, model, specifikationer…"
+                    @bind="searchTerm" />
+            </div>
+        </div>
 
-<button class="btn btn-primary" @onclick="SetupProductModelsTable">Setup ProductModels Table</button>
-<p>@modelResult</p>
-<button class="btn btn-secondary" @onclick="GetProductModels">Get ProductModels</button>
+        <div class="mt-3 d-flex justify-content-center gap-3 flex-column flex-md-row">
+            <button class="btn btn-primary px-5" @onclick="Search">Søg</button>
+            <button class="btn btn-success px-4" @onclick="NavigateCreateAd">Opret Annonce</button>
+        </div>
+    </div>
+</section>
 
-<ul class="list-group mt-2">
-    @foreach (var m in productModels)
-    {
-        <li class="list-group-item">
-            <strong>@m.Brand @m.Model</strong><br />
-            GPU: @m.Gpu · CPU: @m.Cpu · RAM: @m.Ram<br />
-            Storage: @m.Storage · OS: @m.OS<br />
-            Price: @m.Price · Screen: @m.ScreenSize · Condition: @m.Condition
-        </li>
-    }
-</ul>
+<!-- =========  Premium Section ========= -->
+<section class="premium-section py-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h4 fw-bold mb-0">Premium Annoncer</h2>
+            <a class="text-primary fw-semibold text-decoration-none" href="/ads">Se Alle &gt;</a>
+        </div>
+
+        <div class="row g-4">
+            @foreach (var product in premiumProducts)
+            {
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card h-100 shadow-sm border-0">
+                        <img
+                            src="@product.ImageUrl"
+                            class="card-img-top product-img"
+                            alt="@product.Title" />
+                        <div class="card-body">
+                            <h5 class="card-title fw-semibold">@product.Title</h5>
+                            <p class="card-text small text-muted">@product.Specs</p>
+                            <p class="card-text fw-bold text-success mb-1">
+                                @product.Price.ToString("N0") kr
+                            </p>
+                            <p class="card-text small text-muted">
+                                Opslået for @product.DaysAgo dage siden
+                            </p>
+                        </div>
+                        <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
+                            <button type="button" class="btn btn-sm btn-light border-0">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- =========  Footer ========= -->
+<footer class="footer bg-dark text-white pt-5">
+    <div class="container">
+        <div class="row gy-4">
+            <div class="col-md-4">
+                <h5 class="fw-bold d-flex align-items-center gap-1 mb-3">
+                    <i class="bi bi-laptop"></i> LaptopMarket
+                </h5>
+                <p class="small opacity-75">Det bedste sted at købe og sælge bærbare computere online.</p>
+            </div>
+
+            <div class="col-md-4">
+                <h5 class="fw-bold mb-3">Hurtige Links</h5>
+                <ul class="list-unstyled small">
+                    <li><a href="/about" class="text-white text-decoration-none">Om Os</a></li>
+                    <li><a href="/terms" class="text-white text-decoration-none">Vilkår &amp; Betingelser</a></li>
+                    <li><a href="/privacy" class="text-white text-decoration-none">Privatlivspolitik</a></li>
+                    <li><a href="/contact" class="text-white text-decoration-none">Kontakt Os</a></li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h5 class="fw-bold mb-3">Følg Os</h5>
+                <div class="d-flex gap-2">
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-twitter"></i></a>
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <hr class="border-secondary my-4" />
+        <p class="text-center small opacity-75 mb-0">&copy; @DateTime.Now.Year LaptopMarket. Alle rettigheder forbeholdes.</p>
+    </div>
+</footer>
 
 @code {
-    private bool isConnected;
+    private string? searchTerm;
 
-    // Users
-    private string userResult = "";
-    private List<User> users = new();
+    private void Search()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            NavManager.NavigateTo($"/ads?query={Uri.EscapeDataString(searchTerm!)}");
+        }
+    }
 
-    // ProductModels
-    private string modelResult = "";
-    private List<ProductModel> productModels = new();
+    private void NavigateLogin()    => NavManager.NavigateTo("/login");
+    private void NavigateCreateAd() => NavManager.NavigateTo("/ads/create");
 
-    protected override async Task OnInitializedAsync()
-        => isConnected = await DBService.TestConnectionAsync();
+    private readonly List<ProductCard> premiumProducts = new()
+    {
+        new ProductCard {
+            Title = "MacBook Pro 16\" 2023",
+            Specs = "M2 Max, 32GB RAM, 1TB SSD",
+            Price = 23499,
+            ImageUrl = "images/laptop-placeholder.svg",
+            DaysAgo = 2
+        },
+        new ProductCard {
+            Title = "Dell XPS 15",
+            Specs = "i9, 64GB RAM, 2TB SSD, RTX 3080",
+            Price = 18499,
+            ImageUrl = "images/laptop-placeholder.svg",
+            DaysAgo = 1
+        },
+        new ProductCard {
+            Title = "Razer Blade 17",
+            Specs = "i7, 32GB RAM, 1TB SSD, RTX 4070",
+            Price = 16799,
+            ImageUrl = "images/laptop-placeholder.svg",
+            DaysAgo = 3
+        },
+        new ProductCard {
+            Title = "ASUS ROG Zephyrus",
+            Specs = "Ryzen 9, 64GB RAM, RTX 4080",
+            Price = 18799,
+            ImageUrl = "images/laptop-placeholder.svg",
+            DaysAgo = 5
+        }
+    };
 
-    // Users-handlers
-    private async Task SetupUserTable()
-        => userResult = await DBService.SetupUserTable();
-
-    private async Task GetUsers()
-        => users = await DBService.GetAllUsers();
-
-    // ProductModels-handlers
-    private async Task SetupProductModelsTable()
-        => modelResult = await DBService.SetupProductModelsTable();
-
-    private async Task GetProductModels()
-        => productModels = await DBService.GetAllProductModels();
+    private record ProductCard
+    {
+        public string Title { get; init; } = string.Empty;
+        public string Specs { get; init; } = string.Empty;
+        public decimal Price { get; init; }
+        public string ImageUrl { get; init; } = string.Empty;
+        public int DaysAgo { get; init; }
+    }
 }
+
+<style>
+    .hero-section {
+        background-color: #ffffff;
+    }
+
+    .search-input .form-control::placeholder {
+        color: #adb5bd;
+    }
+
+    .product-img {
+        height: 140px;
+        object-fit: contain;
+    }
+
+    .footer ul li a:hover {
+        text-decoration: underline;
+    }
+</style>
