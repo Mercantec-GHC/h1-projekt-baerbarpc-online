@@ -1,5 +1,260 @@
-﻿<h3>ListingsDetailsPage</h3>
+﻿@page "/ListingsDetailsPage"          
+@page "/ListingsDetailsPage/{Slug}"    
+@using BlazorMarkedsplads.Models
+@inject NavigationManager NavManager
 
 @code {
+    [Parameter] public string Slug { get; set; } 
 
+    // --- Placeholder listing (vil senere blive loadet fra DB/Service) ---
+    private readonly Listing listing = new()
+    {
+        Title = "MacBook Pro 16\" 2023 - M2 Max",
+        Price = 23499m,
+        OldPrice = 25499m,
+        PostedAgo = "2 dage siden",
+        Views = 243,
+        Category = "Computere",
+        Brand = "Apple",
+        Model = "MacBook Pro 16\" 2023",
+        Processor = "Apple M2 Max",
+        Ram = "32GB Unified Memory",
+        Storage = "1TB SSD",
+        Screen = "16\" Liquid Retina XDR",
+        Gpu = "38‑core GPU",
+        Condition = "Som Ny",
+        Description = "Sælger min MacBook Pro 16'' 2023 model med M2 Max chip. Kun 3 måneder gammel og i perfekt stand. Leveres med original æske, oplader og AppleCare+ indtil november 2025. Årsag til salg: skifter til stationær computer i mit arbejde. Batteriet har kun 23 cyklusser; ingen ridser eller buler.",
+        Seller = new SellerInfo
+        {
+            Name = "John Doe",
+            AvatarInitials = "JD",
+            Rating = 4.0,
+            Reviews = 15,
+            MemberSince = new DateTime(2022,1,3)
+        },
+        Images = new[] { "images/laptop-placeholder.svg", "images/laptop-placeholder.svg", "images/laptop-placeholder.svg", "images/laptop-placeholder.svg" }
+    };
+
+    // til thumbnail-click
+    private string selectedImage => listing.Images[activeIndex];
+    private int activeIndex;
+    private void SelectImage(int i) => activeIndex = i;
+
+    // Fake lignende annoncer
+    private readonly List<ListingCard> similar = new()
+    {
+        new ListingCard("MacBook Pro 14\" 2023", "M2 Pro, 16GB RAM, 512GB", 13499, "1 dag siden"),
+        new ListingCard("MacBook Pro 16\" 2022", "M1 Max, 32GB RAM, 1TB", 18799, "3 dage siden"),
+        new ListingCard("Dell XPS 17", "i9, 32GB RAM, 1TB SSD", 16799, "2 dage siden"),
+        new ListingCard("Razer Blade 17", "i7, 32GB RAM, RTX 4080", 19499, "5 dage siden"),
+        new ListingCard("ASUS ROG Zephyrus", "Ryzen 9, 32GB RAM, RTX 4070", 15499, "4 dage siden")
+    };
+
+    private record Listing
+    {
+        public string Title { get; init; } = string.Empty;
+        public decimal Price { get; init; }
+        public decimal OldPrice { get; init; }
+        public string PostedAgo { get; init; } = string.Empty;
+        public int Views { get; init; }
+        public string Category { get; init; } = string.Empty;
+        public string Brand { get; init; } = string.Empty;
+        public string Model { get; init; } = string.Empty;
+        public string Processor { get; init; } = string.Empty;
+        public string Ram { get; init; } = string.Empty;
+        public string Storage { get; init; } = string.Empty;
+        public string Screen { get; init; } = string.Empty;
+        public string Gpu { get; init; } = string.Empty;
+        public string Condition { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+        public SellerInfo Seller { get; init; } = new();
+        public string[] Images { get; init; } = Array.Empty<string>();
+    }
+
+    private record SellerInfo
+    {
+        public string Name { get; init; } = string.Empty;
+        public string AvatarInitials { get; init; } = string.Empty;
+        public double Rating { get; init; }
+        public int Reviews { get; init; }
+        public DateTime MemberSince { get; init; }
+    }
+
+    private record ListingCard(string Title, string Specs, decimal Price, string PostedAgo);
 }
+
+<PageTitle>@listing.Title</PageTitle>
+
+<!-- =========  Top Navigation ========= -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
+            <i class="bi bi-laptop"></i>
+            LaptopMarket
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+                <li class="nav-item"><NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink></li>
+                <li class="nav-item"><NavLink class="nav-link" href="/ads" ActiveClass="active">Annoncer</NavLink></li>
+                <li class="nav-item"><NavLink class="nav-link" href="/account" ActiveClass="active">Konto</NavLink></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- =========  Breadcrumb ========= -->
+<div class="bg-light py-2 small">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Forside</a></li>
+                <li class="breadcrumb-item"><a href="/ads" class="text-decoration-none">Annoncer</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@listing.Model</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- =========  Main Details Section ========= -->
+<section class="py-5" style="background-color:#847e7e20;">
+    <div class="container">
+        <div class="row g-5">
+            <!-- Images -->
+            <div class="col-lg-6">
+                <div class="border rounded mb-3 overflow-hidden bg-white">
+                    <img src="@selectedImage" class="img-fluid d-block" alt="@listing.Title" />
+                </div>
+                <div class="d-flex gap-2">
+                    @for (int i = 0; i < listing.Images.Length; i++)
+                    {
+                        var thumb = listing.Images[i];
+                        <button class="border-0 p-0 bg-transparent" @onclick="() => SelectImage(i)">
+                            <img src="@thumb" class="rounded border @(i == activeIndex ? "border-primary" : "border-0")" style="width:72px;height:72px;object-fit:cover;" alt="thumbnail" />
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Details -->
+            <div class="col-lg-6">
+                <h3 class="fw-bold">@listing.Title</h3>
+                <p class="small text-muted mb-1">
+                    Opslået for @listing.PostedAgo • @listing.Views visninger • @listing.Category
+                    <span class="ms-2"><a href="#" class="text-decoration-none"><i class="bi bi-share"></i> Del</a></span>
+                </p>
+                <h2 class="text-success fw-bold">@listing.Price.ToString("N0") kr</h2>
+                <p class="text-muted text-decoration-line-through">@listing.OldPrice.ToString("N0") kr</p>
+
+                <!-- Specs -->
+                <h5 class="fw-bold mt-4">Specifikationer</h5>
+                <div class="row row-cols-2 gy-1 small">
+                    <div class="col text-muted">Mærke</div><div class="col fw-semibold">@listing.Brand</div>
+                    <div class="col text-muted">Model</div><div class="col fw-semibold">@listing.Model</div>
+                    <div class="col text-muted">Processor</div><div class="col fw-semibold">@listing.Processor</div>
+                    <div class="col text-muted">RAM</div><div class="col fw-semibold">@listing.Ram</div>
+                    <div class="col text-muted">Lagring</div><div class="col fw-semibold">@listing.Storage</div>
+                    <div class="col text-muted">Skærm</div><div class="col fw-semibold">@listing.Screen</div>
+                    <div class="col text-muted">Grafik</div><div class="col fw-semibold">@listing.Gpu</div>
+                    <div class="col text-muted">Tilstand</div><div class="col fw-semibold">@listing.Condition</div>
+                </div>
+
+                <!-- Description -->
+                <h5 class="fw-bold mt-4">Beskrivelse</h5>
+                <p class="small">@listing.Description</p>
+
+                <!-- Seller Card -->
+                <div class="card shadow-sm border-0 mt-4">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Sælgerinformation</h6>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
+                                @listing.Seller.AvatarInitials
+                            </div>
+                            <div>
+                                <p class="mb-0 fw-semibold">@listing.Seller.Name</p>
+                                <div class="small text-warning">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi @(i <= Math.Round(listing.Seller.Rating) ? "bi-star-fill" : "bi-star")"></i>
+                                    }
+                                    <span class="text-muted ms-1">@listing.Seller.Rating.ToString("0.0") (@listing.Seller.Reviews anmeldelser)</span>
+                                </div>
+                                <p class="small text-muted mb-0">Medlem siden @listing.Seller.MemberSince.ToString("MMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("da-DK"))</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-primary flex-fill">Skriv til Sælger</button>
+                            <button class="btn btn-outline-secondary flex-fill">Vis Telefonnummer</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Safety tips -->
+                <div class="alert alert-warning mt-3 py-2 small" role="alert">
+                    <i class="bi bi-shield-check me-1"></i> Mød på et offentligt sted ved udveksling
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =========  Similar listings ========= -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h5 class="fw-bold mb-4">Lignende Annoncer</h5>
+        <div class="row g-4">
+            @foreach (var card in similar)
+            {
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card h-100 shadow-sm border-0">
+                        <img src="images/laptop-placeholder.svg" class="card-img-top product-img" alt="@card.Title" />
+                        <div class="card-body">
+                            <h6 class="card-title fw-semibold">@card.Title</h6>
+                            <p class="card-text small text-muted">@card.Specs</p>
+                            <p class="card-text fw-bold text-success mb-1">@card.Price.ToString("N0") kr</p>
+                            <p class="card-text small text-muted">@card.PostedAgo</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- =========  Footer ========= -->
+<footer class="footer bg-dark text-white pt-5">
+    <div class="container">
+        <div class="row gy-4">
+            <div class="col-md-4">
+                <h5 class="fw-bold d-flex align-items-center gap-1 mb-3">
+                    <i class="bi bi-laptop"></i> LaptopMarket
+                </h5>
+                <p class="small opacity-75">Det bedste sted at købe og sælge bærbare computere online.</p>
+            </div>
+
+            <div class="col-md-4">
+                <h5 class="fw-bold mb-3">Hurtige Links</h5>
+                <ul class="list-unstyled small">
+                    <li><a href="/about" class="text-white text-decoration-none">Om Os</a></li>
+                    <li><a href="/terms" class="text-white text-decoration-none">Vilkår &amp; Betingelser</a></li>
+                    <li><a href="/privacy" class="text-white text-decoration-none">Privatlivspolitik</a></li>
+                    <li><a href="/contact" class="text-white text-decoration-none">Kontakt Os</a></li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h5 class="fw-bold mb-3">Følg Os</h5>
+                <div class="d-flex gap-2">
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-twitter"></i></a>
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <hr class="border-secondary my-4" />
+        <p class="text-center small opacity-75 mb-0">&copy; @DateTime.Now.Year LaptopMarket. Alle rettigheder forbeholdes.</p>
+    </div>
+</footer>
