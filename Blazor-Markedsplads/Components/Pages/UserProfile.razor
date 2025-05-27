@@ -1,0 +1,344 @@
+﻿@page "/UserProfile"
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager NavManager
+
+<PageTitle>Min Konto</PageTitle>
+
+<!-- =========  Top Navigation (identisk med HomePage1) ========= -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
+            <i class="bi bi-laptop"></i> LaptopMarket
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+                <li class="nav-item"><NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink></li>
+                <li class="nav-item"><NavLink class="nav-link" href="/ListingsPage" ActiveClass="active">Annoncer</NavLink></li>
+                <li class="nav-item"><button class="btn btn-outline-primary px-4" disabled>Konto</button></li>
+
+                <!-- Brug initialer-dropdown som i designet -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                       href="#" data-bs-toggle="dropdown" style="width:36px;height:36px;">@Initials</a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><NavLink class="dropdown-item" href="/profile">Profil</NavLink></li>
+                        <li><button class="dropdown-item" @onclick="Logout">Log ud</button></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav> <!-- :contentReference[oaicite:0]{index=0} -->
+<!-- =========  Sideindhold ========= -->
+<section class="py-5" style="background-color:#f8f9fa; min-height:70vh;">
+    <div class="container">
+        <h3 class="fw-bold mb-4">Min Konto</h3>
+        <p class="text-muted mb-5">Administrer dine personlige oplysninger og annoncer</p>
+
+        <div class="row">
+            <!-- =======  Venstre side-menu  ======= -->
+            <aside class="col-md-3 mb-4 mb-md-0">
+                <div class="list-group list-group-flush">
+                    <a href="#personal" class="list-group-item list-group-item-action active" data-bs-toggle="tab">
+                        Personlige Oplysninger
+                    </a>
+                    <a href="#password" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        Adgangskode
+                    </a>
+                    <a href="#notifications" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        Notifikationer
+                    </a>
+                    <a href="#payments" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        Betalingsmetoder
+                    </a>
+
+                    <small class="text-uppercase text-muted px-3 pt-4">Mine Annoncer</small>
+                    <a href="#active-ads" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        Aktive Annoncer
+                    </a>
+                    <a href="#saved-ads" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        Gemte Annoncer
+                    </a>
+                    <a href="/CreateListing" class="list-group-item list-group-item-action">
+                        Opret Ny Annonce
+                    </a>
+
+                    <button class="btn btn-link text-danger mt-4 ms-2" @onclick="Logout">
+                        <i class="bi bi-box-arrow-left me-1"></i> Log ud
+                    </button>
+                </div>
+            </aside>
+
+            <!-- =======  Højre hoved-panel  ======= -->
+            <div class="col-md-9 tab-content">
+
+                <!-- ----------  Personlige Oplysninger  ---------- -->
+                <div class="tab-pane fade show active" id="personal">
+                    <div class="card border-0 shadow-sm mb-5">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-1">Personlige Oplysninger</h5>
+                            <p class="text-muted small mb-4">Opdater dine personlige oplysninger</p>
+
+                            <EditForm Model="profile" OnValidSubmit="SaveProfile">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Fornavn</label>
+                                        <InputText class="form-control" @bind-Value="profile.FirstName" />
+                                        <ValidationMessage For="() => profile.FirstName" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Efternavn</label>
+                                        <InputText class="form-control" @bind-Value="profile.LastName" />
+                                        <ValidationMessage For="() => profile.LastName" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Email</label>
+                                        <InputText class="form-control" @bind-Value="profile.Email" />
+                                        <ValidationMessage For="() => profile.Email" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Telefonnummer</label>
+                                        <InputText class="form-control" @bind-Value="profile.Phone" />
+                                        <ValidationMessage For="() => profile.Phone" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold">Adresse</label>
+                                        <InputText class="form-control" @bind-Value="profile.Address" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">By</label>
+                                        <InputText class="form-control" @bind-Value="profile.City" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Postnummer</label>
+                                        <InputText class="form-control" @bind-Value="profile.Zip" />
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2 mt-4">
+                                    <button type="button" class="btn btn-outline-secondary" @onclick="ResetProfile">
+                                        Annuller
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">Gem Ændringer</button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ----------  Aktive Annoncer  ---------- -->
+                <div class="tab-pane fade" id="active-ads">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="fw-bold mb-1">Aktive Annoncer</h5>
+                                    <p class="text-muted small">Administrer dine aktive annoncer</p>
+                                </div>
+                                <a href="/CreateListing" class="btn btn-success">Opret Ny Annonce</a>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:40px;">
+                                                <input type="checkbox" class="form-check-input" />
+                                            </th>
+                                            <th>Produkt</th>
+                                            <th style="width:120px;">Pris</th>
+                                            <th style="width:120px;">Dato</th>
+                                            <th style="width:90px;">Visninger</th>
+                                            <th style="width:100px;">Status</th>
+                                            <th style="width:70px;">Handling</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var ad in Ads)
+                                        {
+                                            <tr>
+                                                <td><input type="checkbox" class="form-check-input" /></td>
+                                                <td>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="fw-semibold">@ad.Title</span>
+                                                        <small class="text-muted">@ad.Subtitle</small>
+                                                    </div>
+                                                </td>
+                                                <td class="fw-semibold">@ad.Price.ToString("N0") kr</td>
+                                                <td>@ad.Date.ToString("d MMM yyyy")</td>
+                                                <td>@ad.Views</td>
+                                                <td>
+                                                    <span class="badge @StatusBadgeClass(ad.Status)">
+                                                        @ad.Status
+                                                    </span>
+                                                </td>
+                                                <td class="d-flex gap-2">
+                                                    <button class="btn btn-sm btn-outline-secondary"
+                                                            title="Rediger" @onclick="() => EditAd(ad)">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger"
+                                                            title="Slet" @onclick="() => DeleteAd(ad)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination (dummy) -->
+                            <nav>
+                                <ul class="pagination small justify-content-center mb-0">
+                                    <li class="page-item @(Page==1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PrevPage">&lt;</button>
+                                    </li>
+                                    @for (int i = 1; i <= TotalPages; i++)
+                                    {
+                                        <li class="page-item @(Page==i ? "active" : "")">
+                                            <button class="page-link" @onclick="@(() => GoToPage(i))">@i</button>
+                                        </li>
+                                    }
+                                    <li class="page-item @(Page==TotalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="NextPage">&gt;</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Andre tab-paneler er tomme placeholders -->
+                <div class="tab-pane fade" id="password"><em>Kommer snart …</em></div>
+                <div class="tab-pane fade" id="notifications"><em>Kommer snart …</em></div>
+                <div class="tab-pane fade" id="payments"><em>Kommer snart …</em></div>
+                <div class="tab-pane fade" id="saved-ads"><em>Kommer snart …</em></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =========  Footer (identisk med HomePage1) ========= -->
+<footer class="footer bg-dark text-white pt-5">
+    <div class="container">
+        <div class="row gy-4">
+            <div class="col-md-4">
+                <h5 class="fw-bold d-flex align-items-center gap-1 mb-3">
+                    <i class="bi bi-laptop"></i> LaptopMarket
+                </h5>
+                <p class="small opacity-75">Det bedste sted at købe og sælge bærbare computere online.</p>
+            </div>
+
+            <div class="col-md-4">
+                <h5 class="fw-bold mb-3">Hurtige Links</h5>
+                <ul class="list-unstyled small">
+                    <li><a href="/about" class="text-white text-decoration-none">Om Os</a></li>
+                    <li><a href="/terms" class="text-white text-decoration-none">Vilkår & Betingelser</a></li>
+                    <li><a href="/privacy" class="text-white text-decoration-none">Privatlivspolitik</a></li>
+                    <li><a href="/contact" class="text-white text-decoration-none">Kontakt Os</a></li>
+                </ul>
+            </div>
+
+            <div class="col-md-4">
+                <h5 class="fw-bold mb-3">Følg Os</h5>
+                <div class="d-flex gap-2">
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-twitter"></i></a>
+                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <hr class="border-secondary my-4" />
+        <p class="text-center small opacity-75 mb-0">&copy; @DateTime.Now.Year LaptopMarket. Alle rettigheder forbeholdes.</p>
+    </div>
+</footer> <!-- :contentReference[oaicite:1]{index=1} -->
+@code {
+    /* ----------   Person-profil ---------- */
+    private readonly ProfileModel profile = new()
+        {
+            FirstName = "John",
+            LastName = "Doe",
+            Email = "john.doe@example.com",
+            Phone = "+45 12 34 56 78",
+            Address = "Hovedgaden 123",
+            City = "København",
+            Zip = "1000"
+        };
+
+    private void SaveProfile()
+    {
+        // TODO: Kald DBService.UpdateUserAsync(profile)
+        Console.WriteLine($"[PROFILE] Gemmer profil {profile.FirstName} {profile.LastName}");
+    }
+    private void ResetProfile() => NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+
+    /* ----------   Aktive annoncer ---------- */
+    private readonly List<AdModel> Ads = new()
+    {
+        new("MacBook Pro 16", "M2 Max, 32GB RAM, 1TB", 23499, new DateTime(2023,11,15), 243, "Aktiv"),
+        new("Dell XPS 15", "i9, 32GB RAM, 1TB SSD",   16999, new DateTime(2023,11,10), 187, "Aktiv"),
+        new("Lenovo ThinkPad X1", "i7, 16GB RAM, 512GB SSD", 9499, new DateTime(2023,11,5), 156, "Reserveret")
+    };
+
+    private int Page = 1;
+    private int TotalPages => 2; // statisk demo
+
+    private void PrevPage() { if (Page > 1) Page--; }
+    private void NextPage() { if (Page < TotalPages) Page++; }
+    private void GoToPage(int p) => Page = p;
+
+    private void EditAd(AdModel ad) => Console.WriteLine($"[AD] Edit {ad.Title}");
+    private void DeleteAd(AdModel ad) => Console.WriteLine($"[AD] Delete {ad.Title}");
+
+    private static string StatusBadgeClass(string status) =>
+        status switch
+        {
+            "Aktiv" => "bg-success",
+            "Reserveret" => "bg-warning text-dark",
+            _ => "bg-secondary"
+        };
+
+    /* ----------   Hjælpemodeller ---------- */
+
+
+
+    private void Logout()
+    {
+        // TODO: Udskift med rigtig sign-out-logik, fx AuthenticationStateProvider / Identity
+        Console.WriteLine("[AUTH] Bruger logger ud …");
+
+        // Navigér til login-siden eller forsiden efter sign-out
+        NavManager.NavigateTo("/login", forceLoad: true);
+    }
+
+    private string Initials => $"{profile.FirstName?[..1]}{profile.LastName?[..1]}".ToUpper();
+
+    private class ProfileModel
+    {
+        [Required] public string FirstName { get; set; } = string.Empty;
+        [Required] public string LastName { get; set; } = string.Empty;
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Zip { get; set; } = string.Empty;
+    }
+
+    private record AdModel(
+        string Title,
+        string Subtitle,
+        decimal Price,
+        DateTime Date,
+        int Views,
+        string Status);
+}
