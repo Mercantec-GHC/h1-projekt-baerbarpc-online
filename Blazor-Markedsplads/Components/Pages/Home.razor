@@ -79,24 +79,26 @@
         </div>
 
         <div class="row g-4">
-            @foreach (var product in premiumProducts)
+            @foreach (var p in premiumProducts)
             {
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <div class="card h-100 shadow-sm border-0">
-                        <img
-                            src="@product.ImageUrl"
-                            class="card-img-top product-img"
-                            alt="@product.Title" />
+
+                        <!-- Fallback-billede -->
+                        <img src="images/laptop-placeholder.svg"
+                             class="card-img-top product-img"
+                             alt="@($"{p.Brand} {p.Model}")" />
+
                         <div class="card-body">
-                            <h5 class="card-title fw-semibold">@product.Title</h5>
-                            <p class="card-text small text-muted">@product.Specs</p>
-                            <p class="card-text fw-bold text-success mb-1">
-                                @product.Price.ToString("N0") kr
-                            </p>
+                            <h5 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h5>
                             <p class="card-text small text-muted">
-                                Opslået for @product.DaysAgo dage siden
+                                @($"{p.Cpu}, {p.Ram} RAM, {p.Storage}")
+                            </p>
+                            <p class="card-text fw-bold text-success mb-1">
+                                @FormatPrice(p.Price)
                             </p>
                         </div>
+
                         <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
                             <button type="button" class="btn btn-sm btn-light border-0">
                                 <i class="bi bi-heart"></i>
@@ -104,6 +106,8 @@
                         </div>
                     </div>
                 </div>
+            }
+
             }
         </div>
     </div>
@@ -151,44 +155,19 @@
     {
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            NavManager.NavigateTo($"/ads?query={Uri.EscapeDataString(searchTerm!)}");
+            NavManager.NavigateTo($"/ListingsPage?query={Uri.EscapeDataString(searchTerm!)}");
         }
     }
 
     private void NavigateLogin()    => NavManager.NavigateTo("/login");
     private void NavigateCreateAd() => NavManager.NavigateTo("/ads/create");
 
-    private readonly List<ProductCard> premiumProducts = new()
+    private List<ProductModel> premiumProducts = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        new ProductCard {
-            Title = "MacBook Pro 16\" 2023",
-            Specs = "M2 Max, 32GB RAM, 1TB SSD",
-            Price = 23499,
-            ImageUrl = "images/laptop-placeholder.svg",
-            DaysAgo = 2
-        },
-        new ProductCard {
-            Title = "Dell XPS 15",
-            Specs = "i9, 64GB RAM, 2TB SSD, RTX 3080",
-            Price = 18499,
-            ImageUrl = "images/laptop-placeholder.svg",
-            DaysAgo = 1
-        },
-        new ProductCard {
-            Title = "Razer Blade 17",
-            Specs = "i7, 32GB RAM, 1TB SSD, RTX 4070",
-            Price = 16799,
-            ImageUrl = "images/laptop-placeholder.svg",
-            DaysAgo = 3
-        },
-        new ProductCard {
-            Title = "ASUS ROG Zephyrus",
-            Specs = "Ryzen 9, 64GB RAM, RTX 4080",
-            Price = 18799,
-            ImageUrl = "images/laptop-placeholder.svg",
-            DaysAgo = 5
-        }
-    };
+        premiumProducts = await DbService.GetPremiumProductModelsAsync();   // 4 dyreste
+    }
 
     private record ProductCard
     {
@@ -198,6 +177,20 @@
         public string ImageUrl { get; init; } = string.Empty;
         public int DaysAgo { get; init; }
     }
+
+    private static string FormatPrice(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        // Fjern ALT undtagen 0-9
+        var digits = new string(raw.Where(char.IsDigit).ToArray());
+
+        return int.TryParse(digits, out var val)
+            ? $"{val:N0} kr"              // "23499" -> "23 499 kr" (da-DK kultur)
+            : raw;                        // fallback hvis parse fejler
+    }
+
 }
 
 <style>

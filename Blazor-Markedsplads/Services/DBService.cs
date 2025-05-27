@@ -103,14 +103,103 @@ namespace BlazorMarkedsplads.Services
             return "ProductModels table created successfully";
         }
 
-        public async Task<List<ProductModel>> GetAllProductModels()
+        public async Task<List<ProductModel>> GetAllProductModelsAsync()
         {
             var list = new List<ProductModel>();
+
+            try
+            {
+                const string sql = "SELECT * FROM product_models;";
+                await using var conn = new NpgsqlConnection(_connectionString);
+                await conn.OpenAsync();
+                await using var cmd = new NpgsqlCommand(sql, conn);
+                await using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    // bemærk lille l  ↓ ↓
+                    list.Add(new ProductModel
+                    {
+                        Id = reader.GetInt32(reader.GetOrdinal("id")),
+                        Brand = reader.GetString(reader.GetOrdinal("brand")),
+                        Model = reader.GetString(reader.GetOrdinal("model")),
+                        Gpu = reader.GetString(reader.GetOrdinal("gpu")),
+                        Cpu = reader.GetString(reader.GetOrdinal("cpu")),
+                        Ram = reader.GetString(reader.GetOrdinal("ram")),
+                        Storage = reader.GetString(reader.GetOrdinal("storage")),
+                        OS = reader.GetString(reader.GetOrdinal("os")),
+                        Price = reader.GetString(reader.GetOrdinal("price")),
+                        ScreenSize = reader.GetString(reader.GetOrdinal("screen_size")),
+                        Condition = reader.GetString(reader.GetOrdinal("condition"))
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching product models: {ex.Message}");
+                // evt. _logger.LogError(ex, "...");
+            }
+
+            return list;        
+        }
+        // Henter de dyreste laptops (default 4)
+        public async Task<List<ProductModel>> GetPremiumProductModelsAsync(int take = 4)
+        {
+            var list = new List<ProductModel>();
+
+            const string sql = @"
+        SELECT *
+        FROM   product_models
+        ORDER  BY (regexp_replace(price, '[^0-9]', '', 'g'))::int DESC   -- cast ”12 499 kr” → 12499
+        LIMIT  @take;";
+
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand("SELECT * FROM product_models", conn);
-            await using var reader = await cmd.ExecuteReaderAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("take", take);
 
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new ProductModel
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("id")),
+                    Brand = reader.GetString(reader.GetOrdinal("brand")),
+                    Model = reader.GetString(reader.GetOrdinal("model")),
+                    Gpu = reader.GetString(reader.GetOrdinal("gpu")),
+                    Cpu = reader.GetString(reader.GetOrdinal("cpu")),
+                    Ram = reader.GetString(reader.GetOrdinal("ram")),
+                    Storage = reader.GetString(reader.GetOrdinal("storage")),
+                    OS = reader.GetString(reader.GetOrdinal("os")),
+                    Price = reader.GetString(reader.GetOrdinal("price")),
+                    ScreenSize = reader.GetString(reader.GetOrdinal("screen_size")),
+                    Condition = reader.GetString(reader.GetOrdinal("condition"))
+                });
+            }
+
+            return list;
+        }
+
+        // Fritekstsøgning (brand, model, cpu, gpu, os …)
+        public async Task<List<ProductModel>> SearchProductModelsAsync(string term)
+        {
+            var list = new List<ProductModel>();
+
+            const string sql = @"
+        SELECT *
+        FROM   product_models
+        WHERE  brand  ILIKE @t
+           OR  model  ILIKE @t
+           OR  cpu    ILIKE @t
+           OR  gpu    ILIKE @t
+           OR  os     ILIKE @t;";
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("t", $"%{term}%");
+
+            await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 list.Add(new ProductModel
@@ -133,3 +222,4 @@ namespace BlazorMarkedsplads.Services
         }
     }
 }
+

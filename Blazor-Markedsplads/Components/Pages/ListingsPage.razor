@@ -1,364 +1,176 @@
 ﻿@page "/ListingsPage"
+@using System.Linq
 @using BlazorMarkedsplads.Models
-@inject NavigationManager NavManager
-@inject DBService DBService
+@inject DBService Db
+@inject NavigationManager Nav
 
-<PageTitle>LaptopMarket – Annoncer</PageTitle>
+<PageTitle>Alle Annoncer</PageTitle>
 
-<!-- =========  Top Navigation (kopieret fra HomePage1) ========= -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
-            <i class="bi bi-laptop"></i>
-            LaptopMarket
-        </a>
+<h2 class="mb-4">Bærbare computere</h2>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+<!-- ===== Søg + sortér ===== -->
+<div class="row mb-3 g-2">
+    <div class="col-sm-4">
+        <input class="form-control" placeholder="Søg …" @bind="SearchBox" />
+    </div>
 
-        <div class="collapse navbar-collapse" id="mainNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
-                <li class="nav-item"><NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/ads" ActiveClass="active">Annoncer</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/account" ActiveClass="active">Konto</NavLink></li>
-                <li class="nav-item">
-                    <button class="btn btn-primary px-4" @onclick="NavigateLogin">Log ind</button>
+    <div class="col-sm-3">
+        <select class="form-select" @bind="Order">
+            <option value="priceDesc">Pris ↓</option>
+            <option value="priceAsc">Pris ↑</option>
+        </select>
+    </div>
+
+    <div class="col-sm-2 d-grid">
+        <button class="btn btn-primary" @onclick="ApplySearch">Opdater</button>
+    </div>
+</div>
+
+@if (isBusy)
+{
+    <p><em>Indlæser annoncer …</em></p>
+}
+else if (!view.Any())
+{
+    <p>Ingen annoncer matcher søgningen.</p>
+}
+else
+{
+    <!-- ===== Annoncer ===== -->
+    <div class="row g-4">
+        @foreach (var p in view)
+        {
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div class="card h-100 shadow-sm border-0">
+                    <img src="images/laptop-placeholder.svg"
+                         class="card-img-top" style="height:140px;object-fit:contain"
+                         alt="@($"{p.Brand} {p.Model}")" />
+
+                    <div class="card-body">
+                        <h6 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h6>
+                        <p class="card-text small text-muted mb-1">
+                            @($"{p.Cpu}, {p.Ram} RAM, {p.Storage}")
+                        </p>
+                        <p class="card-text fw-bold text-success mb-0">
+                            @FormatPrice(p.Price)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- ===== Pagination ===== -->
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(currentPage == 1 ? "disabled" : null)">
+                <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">«</button>
+            </li>
+
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(currentPage == i ? "active" : null)">
+                    <button class="page-link" @onclick="() => ChangePage(i)">@i</button>
                 </li>
-            </ul>
-        </div>
-    </div>
-</nav>
+            }
 
-<!-- =========  Listings Section ========= -->
-<section class="py-5 bg-light">
-    <div class="container">
-        <div class="row">
-            <!-- Filters Sidebar -->
-            <aside class="col-12 col-md-3 col-lg-2 mb-4">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body p-3">
-                        <h5 class="fw-bold mb-3">Filtre</h5>
+            <li class="page-item @(currentPage == totalPages ? "disabled" : null)">
+                <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">»</button>
+            </li>
+        </ul>
+    </nav>
+}
 
-                        <!-- Mærke -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Mærke</h6>
-                            @foreach (var brand in brands)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@brand" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@brand">@brand</label>
-                                </div>
-                            }
-                        </div>
+@code
+{
+    /* ---------- QUERY-STRING PARAMS ---------- */
+    [SupplyParameterFromQuery(Name = "query")]
+    public string? Query { get; set; }
 
-                        <!-- Model -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Model</h6>
-                            <input class="form-control form-control-sm" placeholder="F.eks. MacBook Air…" @bind="modelQuery" />
-                        </div>
+    [SupplyParameterFromQuery(Name = "order")]
+    public string Order { get; set; } = "priceDesc";
 
-                        <!-- Skærmstørrelse -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Skærmstørrelse</h6>
-                            @foreach (var size in screenSizes)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@size" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@size">@size</label>
-                                </div>
-                            }
-                        </div>
+    [SupplyParameterFromQuery(Name = "page")]
+    public int? PageFromUrl { get; set; }
 
-                        <!-- CPU -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">CPU</h6>
-                            @foreach (var cpu in cpus)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@cpu" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@cpu">@cpu</label>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- RAM -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">RAM</h6>
-                            @foreach (var ram in rams)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@ram" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@ram">@ram</label>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Lagring -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Lagring</h6>
-                            @foreach (var storage in storages)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@storage" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@storage">@storage</label>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Tilstand -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Tilstand</h6>
-                            @foreach (var condition in conditions)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@condition" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@condition">@condition</label>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Printerval -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Printerval</h6>
-                            <input type="range" class="form-range" min="0" max="35000" step="100" @bind="priceMax" />
-                            <small class="text-muted">@priceMax.ToString("N0") kr</small>
-                        </div>
-
-                        <!-- Operativsystem -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Operativsystem</h6>
-                            @foreach (var os in oss)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@os" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@os">@os</label>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Anvendelse -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Anvendelse</h6>
-                            @foreach (var use in usages)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="@use" @onchange="@OnFilterChanged" />
-                                    <label class="form-check-label" for="@use">@use</label>
-                                </div>
-                            }
-                        </div>
-
-                        <!-- Placering -->
-                        <div class="mb-3">
-                            <h6 class="fw-semibold small text-uppercase mb-2">Placering</h6>
-                            <input class="form-control form-control-sm" placeholder="By eller postnummer" @bind="locationQuery" />
-                        </div>
-
-                        <button class="btn btn-primary w-100 mb-2" @onclick="ApplyFilters">Anvend Filtre</button>
-                        <button class="btn btn-light w-100" @onclick="ResetFilters">Nulstil</button>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Listings Grid -->
-            <div class="col">
-                <!-- Top Bar -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0"><span class="fw-bold">@filteredListings.Count()</span> Annoncer</h5>
-
-                    <div class="d-flex gap-2">
-                        <select class="form-select form-select-sm" style="width: 180px;" @bind="sortOrder">
-                            <option value="newest">Sorter efter: Nyeste</option>
-                            <option value="priceAsc">Pris: Lav til høj</option>
-                            <option value="priceDesc">Pris: Høj til lav</option>
-                        </select>
-                        <button class="btn btn-success btn-sm d-none d-md-inline" @onclick="NavigateCreateAd">Opret Annonce</button>
-                    </div>
-                </div>
-
-                <!-- Cards -->
-                <div class="row g-4">
-                    @foreach (var product in pagedListings)
-                    {
-                        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                            <div class="card h-100 shadow-sm border-0">
-                                <img src="@product.ImageUrl" class="card-img-top product-img" alt="@product.Title" />
-                                <div class="card-body">
-                                    <h6 class="card-title fw-semibold">@product.Title</h6>
-                                    <p class="card-text small text-muted">@product.Specs</p>
-                                    <p class="card-text fw-bold text-success mb-1">@product.Price.ToString("N0") kr</p>
-                                    <p class="card-text small text-muted">Opslået for @product.DaysAgo siden</p>
-                                </div>
-                                <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
-                                    <button type="button" class="btn btn-sm btn-light border-0">
-                                        <i class="bi bi-heart"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <!-- Pagination -->
-                <nav class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">&#8249;</button>
-                        </li>
-
-                        @for (var i = 1; i <= totalPages; i++)
-                        {
-                            if (i == currentPage || (i <= currentPage + 1 && i >= currentPage - 1) || i == 1 || i == totalPages)
-                            {
-                                <li class="page-item @(i == currentPage ? "active" : "")">
-                                    <button class="page-link" @onclick="() => ChangePage(i)">@i</button>
-                                </li>
-                            }
-                            else if (i == currentPage - 2 || i == currentPage + 2)
-                            {
-                                <li class="page-item disabled"><span class="page-link">…</span></li>
-                            }
-                        }
-
-                        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">&#8250;</button>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- =========  Footer (kopieret fra HomePage1) ========= -->
-<footer class="footer bg-dark text-white pt-5">
-    <div class="container">
-        <div class="row gy-4">
-            <div class="col-md-4">
-                <h5 class="fw-bold d-flex align-items-center gap-1 mb-3">
-                    <i class="bi bi-laptop"></i> LaptopMarket
-                </h5>
-                <p class="small opacity-75">Det bedste sted at købe og sælge bærbare computere online.</p>
-            </div>
-
-            <div class="col-md-4">
-                <h5 class="fw-bold mb-3">Hurtige Links</h5>
-                <ul class="list-unstyled small">
-                    <li><a href="/about" class="text-white text-decoration-none">Om Os</a></li>
-                    <li><a href="/terms" class="text-white text-decoration-none">Vilkår &amp; Betingelser</a></li>
-                    <li><a href="/privacy" class="text-white text-decoration-none">Privatlivspolitik</a></li>
-                    <li><a href="/contact" class="text-white text-decoration-none">Kontakt Os</a></li>
-                </ul>
-            </div>
-
-            <div class="col-md-4">
-                <h5 class="fw-bold mb-3">Følg Os</h5>
-                <div class="d-flex gap-2">
-                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-facebook"></i></a>
-                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-twitter"></i></a>
-                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-instagram"></i></a>
-                </div>
-            </div>
-        </div>
-        <hr class="border-secondary my-4" />
-        <p class="text-center small opacity-75 mb-0">&copy; @DateTime.Now.Year LaptopMarket. Alle rettigheder forbeholdes.</p>
-    </div>
-</footer>
-
-@code {
-    // --- UI State ---
+    /* ---------- FELTER ---------- */
+    private readonly int pageSize = 12;
     private int currentPage = 1;
-    private int pageSize = 12;
+    private int totalPages = 1;
 
-    private string sortOrder = "newest";
+    private string? SearchBox;
+    private bool isBusy;
 
-    private int priceMax = 35000;
+    private List<ProductModel> all = new();
+    private IEnumerable<ProductModel> view = Enumerable.Empty<ProductModel>();
 
-    private string? modelQuery;
-    private string? locationQuery;
-
-    // Selected filters are stored in hash sets
-    private readonly HashSet<string> selectedBrands = new();
-    private readonly HashSet<string> selectedCpus = new();
-    private readonly HashSet<string> selectedRams = new();
-    private readonly HashSet<string> selectedStorages = new();
-    private readonly HashSet<string> selectedSizes = new();
-    private readonly HashSet<string> selectedConditions = new();
-    private readonly HashSet<string> selectedOs = new();
-    private readonly HashSet<string> selectedUsages = new();
-
-    // --- Filter Options ---
-    private readonly string[] brands = { "Apple", "Dell", "HP", "Lenovo", "ASUS", "Acer", "Razer" };
-    private readonly string[] screenSizes = { "Under 13\"", "13-14\"", "15-16\"", "Over 17\"" };
-    private readonly string[] cpus = { "Intel i3", "Intel i5", "Intel i7", "Intel i9", "AMD Ryzen 3/5", "AMD Ryzen 7/9", "Apple M1/M2/M3" };
-    private readonly string[] rams = { "4 GB", "8 GB", "16 GB", "32 GB+" };
-    private readonly string[] storages = { "HDD", "128 GB", "256 GB", "512 GB", "1TB+" };
-    private readonly string[] conditions = { "Ny", "Brugt", "Renoveret" };
-    private readonly string[] oss = { "Windows", "macOS", "Linux", "Uden OS" };
-    private readonly string[] usages = { "Gaming", "Studier", "Arbejde", "Video/Foto-redigering" };
-
-    // --- Sample Data (simpel seed indtil DB-integration) ---
-    private readonly List<ProductCard> allListings = new()
+    /* ---------- LIFECYCLE ---------- */
+    protected override async Task OnParametersSetAsync()
     {
-        new ProductCard { Title = "MacBook Pro 14\" 2023", Specs = "M2 Pro, 16GB RAM, 512GB SSD", Price = 13499, ImageUrl = "images/laptop-placeholder.svg", DaysAgo = "1 time" },
-        new ProductCard { Title = "Dell XPS 13", Specs = "i7, 16GB RAM, 512GB SSD", Price = 8799, ImageUrl = "images/laptop-placeholder.svg", DaysAgo = "3 timer" },
-        new ProductCard { Title = "HP Spectre x360", Specs = "i5, 8GB RAM, 256GB SSD", Price = 6099, ImageUrl = "images/laptop-placeholder.svg", DaysAgo = "5 timer" },
-        new ProductCard { Title = "Lenovo ThinkPad X1", Specs = "i7, 16GB RAM, 1TB SSD", Price = 10199, ImageUrl = "images/laptop-placeholder.svg", DaysAgo = "8 timer" },
-        new ProductCard { Title = "ASUS ZenBook 14", Specs = "Ryzen 7, 16GB RAM, 512GB SSD", Price = 7499, ImageUrl = "images/laptop-placeholder.svg", DaysAgo = "12 timer" },
-        new ProductCard { Title = "Acer Swift 5", Specs = "i5, 8GB RAM, 512GB SSD", Price = 5799, ImageUrl = "images/laptop-placeholder.svg", DaysAgo = "1 dag" },
-        // ... tilføj flere fake items så grid ser fyldig ud
-    };
-
-    private IEnumerable<ProductCard> filteredListings => allListings
-        // TODO: implementere filterlogik; midlertidigt kun prisfilter
-        .Where(p => p.Price <= priceMax);
-
-    private IEnumerable<ProductCard> pagedListings => filteredListings
-        .Skip((currentPage - 1) * pageSize)
-        .Take(pageSize);
-
-    private int totalPages => (int)Math.Ceiling((double)filteredListings.Count() / pageSize);
-
-    // --- Navigation Helpers ---
-    private void NavigateLogin() => NavManager.NavigateTo("/login");
-    private void NavigateCreateAd() => NavManager.NavigateTo("/ads/create");
-
-    // --- Handlers ---
-    private void OnFilterChanged(ChangeEventArgs _) { /* filter state opdateres */ }
-
-    private void ApplyFilters() { currentPage = 1; }
-
-    private void ResetFilters()
-    {
-        selectedBrands.Clear();
-        selectedCpus.Clear();
-        selectedRams.Clear();
-        selectedStorages.Clear();
-        selectedSizes.Clear();
-        selectedConditions.Clear();
-        selectedOs.Clear();
-        selectedUsages.Clear();
-        modelQuery = null;
-        locationQuery = null;
-        priceMax = 35000;
-        currentPage = 1;
+        currentPage = PageFromUrl ?? 1;
+        SearchBox = Query;         // vis aktuel søgestreng i input
+        await LoadData();
+        BuildView();
     }
 
-    private void OnSortChanged(ChangeEventArgs _) { /* sortering */ }
-
-    private void ChangePage(int page)
+    /* ---------- UI-HANDLERS ---------- */
+    private void ApplySearch()
     {
-        currentPage = Math.Clamp(page, 1, totalPages);
+        // nulstil til side 1 ved ny søgning/sortering
+        var url = $"ListingsPage?query={Uri.EscapeDataString(SearchBox ?? "")}&order={Order}&page=1";
+        Nav.NavigateTo(url);
     }
 
-    private record ProductCard
+    private void ChangePage(int newPage)
     {
-        public string Title { get; init; } = string.Empty;
-        public string Specs { get; init; } = string.Empty;
-        public decimal Price { get; init; }
-        public string ImageUrl { get; init; } = string.Empty;
-        public string DaysAgo { get; init; } = string.Empty;
-    };
+        if (newPage < 1 || newPage > totalPages) return;
+
+        var url = $"ListingsPage?query={Uri.EscapeDataString(Query ?? "")}&order={Order}&page={newPage}";
+        Nav.NavigateTo(url);
+    }
+
+    /* ---------- DATA ---------- */
+    private async Task LoadData()
+    {
+        isBusy = true;
+
+        all = string.IsNullOrWhiteSpace(Query)
+            ? await Db.GetAllProductModelsAsync()
+            : await Db.SearchProductModelsAsync(Query);
+
+        isBusy = false;
+    }
+
+    private void BuildView()
+    {
+        IEnumerable<ProductModel> filtered = all;
+
+        // sortering
+        filtered = Order switch
+        {
+            "priceAsc" => filtered.OrderBy(p => CleanPrice(p.Price)),
+            "priceDesc" => filtered.OrderByDescending(p => CleanPrice(p.Price)),
+            _ => filtered
+        };
+
+        totalPages = Math.Max(1, (int)Math.Ceiling((double)filtered.Count() / pageSize));
+        currentPage = Math.Clamp(currentPage, 1, totalPages);
+
+        view = filtered
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize);
+    }
+
+    /* ---------- HELPERS ---------- */
+    private static int CleanPrice(string raw)
+    {
+        var digits = new string(raw.Where(char.IsDigit).ToArray());
+        return int.TryParse(digits, out var v) ? v : 0;
+    }
+
+    private static string FormatPrice(string raw)
+    {
+        var v = CleanPrice(raw);
+        return v == 0 ? raw : $"{v:N0} kr";
+    }
 }

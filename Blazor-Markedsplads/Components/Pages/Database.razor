@@ -110,7 +110,7 @@ else if (!string.IsNullOrEmpty(message))
         => await Run(async () =>
         {
             users = await Db.GetAllUsers();
-            productModels = await Db.GetAllProductModels();
+            productModels = await Db.GetAllProductModelsAsync();
         });
 
     // Fælles “spinner” / status-logger
