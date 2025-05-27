@@ -1,0 +1,17 @@
+﻿@namespace BlazorMarkedsplads.Components
+@using Microsoft.AspNetCore.Components
+
+<div class="form-check">
+    <input type="checkbox"
+           class="form-check-input"
+           value="@Item"
+           checked="@Checked"
+           @onchange="Changed" />
+    <label class="form-check-label">@Item</label>
+</div>
+
+@code {
+    [Parameter] public string Item { get; set; } = string.Empty;
+    [Parameter] public bool Checked { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> Changed { get; set; }
+}

@@ -1,0 +1,12 @@
+﻿@namespace BlazorMarkedsplads.Components
+@using Microsoft.AspNetCore.Components
+
+<div class="mb-3">
+    <h6 class="small fw-bold">@Title</h6>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
