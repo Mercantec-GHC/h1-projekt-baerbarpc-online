@@ -331,9 +331,53 @@ namespace BlazorMarkedsplads.Services
         }
 
 
+        public async Task SetupListingsTableAsync()
+        {
+            const string sql = @"
+        CREATE TABLE IF NOT EXISTS listings(
+            id           SERIAL PRIMARY KEY,
+            product_id   INT NOT NULL REFERENCES product_models(id) ON DELETE CASCADE,
+            user_id      INT NOT NULL REFERENCES users(id)          ON DELETE CASCADE,
+            title        TEXT        NOT NULL,
+            description  TEXT        NOT NULL,
+            phone        TEXT        NOT NULL,
+            location     TEXT        NOT NULL,
+            created_utc  TIMESTAMPTZ NOT NULL DEFAULT now()
+        );";
 
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            await cmd.ExecuteNonQueryAsync();
+        }
 
+        public async Task<int> InsertProductModelAsync(ProductModel p)
+        {
+            const string sql = @"
+        INSERT INTO product_models
+            (brand, model, gpu, cpu, ram, storage, os, price, screen_size, condition)
+        VALUES
+            (@brand, @model, @gpu, @cpu, @ram, @storage, @os, @price, @screen_size, @condition)
+        RETURNING id;";
 
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@brand", p.Brand);
+            cmd.Parameters.AddWithValue("@model", p.Model);
+            cmd.Parameters.AddWithValue("@gpu", p.Gpu);
+            cmd.Parameters.AddWithValue("@cpu", p.Cpu);
+            cmd.Parameters.AddWithValue("@ram", p.Ram);
+            cmd.Parameters.AddWithValue("@storage", p.Storage);
+            cmd.Parameters.AddWithValue("@os", p.OS);
+            cmd.Parameters.AddWithValue("@price", p.Price);
+            cmd.Parameters.AddWithValue("@screen_size", p.ScreenSize);
+            cmd.Parameters.AddWithValue("@condition", p.Condition);
+
+            var idObj = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(idObj);
+        }
 
     }
 

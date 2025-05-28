@@ -1,36 +1,41 @@
-using Blazor_Markedsplads.Components;
-using BlazorMarkedsplads.Services;
-
-
+using BlazorMarkedsplads.Services;                    // som før
+using BlazorMarkedsplads.Components;
+using BlazorMarkedsplads;
+using Microsoft.Extensions.DependencyInjection;
+using Blazor_Markedsplads.Components;       // ? NYT (til DI helpers)
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+/* ---------- Services ---------- */
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+/* eksisterende service */
 builder.Services.AddScoped<DBService>();
 
-
-
-
-
-
-
-
+/* NYT: repository-lag til annoncer  */
+builder.Services.AddScoped<IListingRepository, ListingRepository>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+/* ---------- Engangs-setup af DB-tabeller ---------- */
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<DBService>();
+
+    // (her kunne du også kalde SetupUserTable / SetupProductModelsTable
+    //  hvis du vil køre dem ved opstart)
+    await db.SetupListingsTableAsync();               // ? NYT
+}
+
+/* ---------- Pipeline ---------- */
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    app.UseHsts();                                   // prod-HSTS
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseAntiforgery();
 
