@@ -1,6 +1,10 @@
 ﻿@page "/login"
 @using System.ComponentModel.DataAnnotations
 @inject NavigationManager NavManager
+@inject IUserRepository UserRepo
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
 
 <PageTitle>Log ind</PageTitle>
 
@@ -35,7 +39,7 @@
                 <h4 class="fw-bold">Log ind på din konto</h4>
                 <p class="small text-muted mb-4">Indtast dine oplysninger for at logge ind</p>
 
-                <EditForm Model="login" OnValidSubmit="HandleValidSubmit">
+                <EditForm Model="login" OnValidSubmit="HandleValidSubmit" FormName="LoginForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
@@ -110,12 +114,23 @@
 @code {
     private readonly LoginModel login = new();
 
-    private void HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
-        // TODO: Integrer rigtig login-logik (Identity eller DBService)
-        Console.WriteLine($"[LOGIN] {login.Email}");
-        NavManager.NavigateTo("/");
+        var u = await UserRepo.GetByEmailAsync(login.Email);
+        if (u is null || u.Password != login.Password)
+        {
+            error = "Forkert email eller kodeord";
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "uid", u.Id.ToString());
+        NavManager.NavigateTo("/UserProfile");
     }
+
+    private string? error;
+
+   
+
 
     private class LoginModel
     {

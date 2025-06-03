@@ -2,6 +2,7 @@
 @page "/ListingsDetailsPage/{Slug}"    
 @using BlazorMarkedsplads.Models
 @inject NavigationManager NavManager
+@rendermode InteractiveServer
 
 @code {
     [Parameter] public string Slug { get; set; } 

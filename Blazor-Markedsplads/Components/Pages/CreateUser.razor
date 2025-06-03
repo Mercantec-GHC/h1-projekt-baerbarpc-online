@@ -1,180 +1,183 @@
 ﻿@page "/CreateUser"
-@using System.ComponentModel.DataAnnotations
+@using BlazorMarkedsplads.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject IUserRepository UserRepo
 @inject NavigationManager NavManager
+@inject IJSRuntime JS
+@rendermode InteractiveServer
 
 <PageTitle>Opret Konto</PageTitle>
 
-<!-- =========  Top Navigation ========= -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
-            <i class="bi bi-laptop"></i>
-            LaptopMarket
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="mainNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
-                <li class="nav-item"><NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/ads" ActiveClass="active">Annoncer</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/account" ActiveClass="active">Konto</NavLink></li>
-                <li class="nav-item"><button class="btn btn-primary px-4" @onclick="NavigateLogin">Log ind</button></li>
-            </ul>
-        </div>
-    </div>
-</nav>
+@code {
+    private RegisterModel register = new();
+    private string? formError;
 
-<!-- =========  Create Account Form ========= -->
-<section class="py-5" style="background-color:#847e7e20; min-height:65vh;">
+    private bool userJustCreated = false;
+    private int createdUserId;
+
+    private async Task HandleSubmit(EditContext editContext)
+    {
+        Console.WriteLine($"[DEBUG] Før DB-indsættelse: " +
+                          $"FullName='{register.FullName}', " +
+                          $"Email='{register.Email}', " +
+                          $"Password='{register.Password}', " +
+                          $"ConfirmPassword='{register.ConfirmPassword}', " +
+                          $"Phone='{register.Phone}', " +
+                          $"Address='{register.Address}', " +
+                          $"City='{register.City}', " +
+                          $"PostalCode='{register.PostalCode}', " +
+                          $"AcceptTerms='{register.AcceptTerms}'");
+
+        var u = new User
+            {
+                Name = register.FullName,
+                Email = register.Email,
+                Password = register.Password,
+                Phone = register.Phone ?? string.Empty,
+                Address = register.Address ?? string.Empty,
+                City = register.City ?? string.Empty,
+                ZipCode = register.PostalCode ?? string.Empty
+            };
+
+        try
+        {
+            var id = await UserRepo.InsertAsync(u);
+            createdUserId = id;
+            userJustCreated = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            formError = $"Kunne ikke oprette bruger: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (userJustCreated)
+        {
+            userJustCreated = false;
+            await JS.InvokeVoidAsync("localStorage.setItem", "uid", createdUserId.ToString());
+            NavManager.NavigateTo("/UserProfile");
+        }
+    }
+
+    private class RegisterModel
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+        public string? Phone { get; set; }
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? PostalCode { get; set; }
+        public bool AcceptTerms { get; set; }
+    }
+}
+
+<section class="py-5" style="background-color:#f0f0f0; min-height:65vh;">
     <div class="container d-flex justify-content-center">
-        <div class="card shadow-sm border-0" style="max-width: 520px; width: 100%;">
+        <div class="card shadow-sm border-0" style="max-width:520px; width:100%;">
             <div class="card-body p-4 p-md-5">
                 <h4 class="fw-bold">Opret Brugerkonto</h4>
                 <p class="small text-muted mb-4">Udfyld nedenstående oplysninger for at oprette din konto</p>
 
-                <EditForm Model="register" OnValidSubmit="HandleValidSubmit">
+                @if (!string.IsNullOrWhiteSpace(formError))
+                {
+                    <div class="alert alert-danger">@formError</div>
+                }
+
+                <!-- Her sætter vi FormName på EditForm -->
+                <EditForm Model="register"
+                          OnSubmit="HandleSubmit"
+                          FormName="CreateUserForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
                     <!-- Fulde navn -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Fulde navn</label>
-                        <InputText class="form-control" @bind-Value="register.FullName" placeholder="Indtast dit fulde navn" />
-                        <ValidationMessage For="() => register.FullName" />
+                        <InputText class="form-control"
+                                   @bind-Value="register.FullName"
+                                   placeholder="Indtast dit fulde navn" />
                     </div>
 
                     <!-- Email -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Email</label>
-                        <InputText class="form-control" type="email" @bind-Value="register.Email" placeholder="Indtast din email" />
-                        <ValidationMessage For="() => register.Email" />
+                        <InputText class="form-control"
+                                   type="email"
+                                   @bind-Value="register.Email"
+                                   placeholder="Indtast din email" />
                     </div>
 
-                    <!-- Password -->
+                    <!-- Adgangskode -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Adgangskode</label>
-                        <InputText class="form-control" type="password" @bind-Value="register.Password" />
-                        <ValidationMessage For="() => register.Password" />
+                        <InputText class="form-control"
+                                   type="password"
+                                   @bind-Value="register.Password" />
                     </div>
 
-                    <!-- Confirm Password -->
+                    <!-- Bekræft adgangskode -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Bekræft adgangskode</label>
-                        <InputText class="form-control" type="password" @bind-Value="register.ConfirmPassword" />
-                        <ValidationMessage For="() => register.ConfirmPassword" />
+                        <InputText class="form-control"
+                                   type="password"
+                                   @bind-Value="register.ConfirmPassword" />
                     </div>
 
-                    <!-- Telefon -->
+                    <!-- Telefonnummer -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Telefonnummer</label>
-                        <InputText class="form-control" @bind-Value="register.Phone" placeholder="Indtast dit telefonnummer" />
+                        <InputText class="form-control"
+                                   @bind-Value="register.Phone"
+                                   placeholder="Indtast dit telefonnummer" />
                     </div>
 
                     <!-- Adresse -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Adresse</label>
-                        <InputText class="form-control" @bind-Value="register.Address" placeholder="Indtast din adresse" />
+                        <InputText class="form-control"
+                                   @bind-Value="register.Address"
+                                   placeholder="Indtast din adresse" />
                     </div>
 
                     <!-- By -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">By</label>
-                        <InputText class="form-control" @bind-Value="register.City" placeholder="Indtast by" />
+                        <InputText class="form-control"
+                                   @bind-Value="register.City"
+                                   placeholder="Indtast by" />
                     </div>
 
                     <!-- Postnummer -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Postnummer</label>
-                        <InputText class="form-control" @bind-Value="register.PostalCode" placeholder="Indtast postnummer" />
+                        <InputText class="form-control"
+                                   @bind-Value="register.PostalCode"
+                                   placeholder="Indtast postnummer" />
                     </div>
 
-                    <!-- Terms -->
+                    <!-- Vilkår og betingelser -->
                     <div class="form-check mb-3">
-                        <InputCheckbox class="form-check-input" @bind-Value="register.AcceptTerms" />
-                        <label class="form-check-label small">Jeg accepterer vilkår og betingelser</label>
-                        <ValidationMessage For="() => register.AcceptTerms" />
+                        <InputCheckbox class="form-check-input"
+                                       @bind-Value="register.AcceptTerms" />
+                        <label class="form-check-label small">
+                            Jeg accepterer vilkår og betingelser
+                        </label>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100 mb-3">Opret Konto</button>
+                    <button type="submit" class="btn btn-primary w-100 mb-3">
+                        Opret Konto
+                    </button>
 
-                    <p class="text-center small mb-0">Har du allerede en konto? <a href="/login">Log ind her</a></p>
+                    <p class="text-center small mb-0">
+                        Har du allerede en konto? <a href="/login">Log ind her</a>
+                    </p>
                 </EditForm>
             </div>
         </div>
     </div>
 </section>
-
-<!-- =========  Footer ========= -->
-<footer class="footer bg-dark text-white pt-5">
-    <div class="container">
-        <div class="row gy-4">
-            <div class="col-md-4">
-                <h5 class="fw-bold d-flex align-items-center gap-1 mb-3">
-                    <i class="bi bi-laptop"></i> LaptopMarket
-                </h5>
-                <p class="small opacity-75">Det bedste sted at købe og sælge bærbare computere online.</p>
-            </div>
-
-            <div class="col-md-4">
-                <h5 class="fw-bold mb-3">Hurtige Links</h5>
-                <ul class="list-unstyled small">
-                    <li><a href="/about" class="text-white text-decoration-none">Om Os</a></li>
-                    <li><a href="/terms" class="text-white text-decoration-none">Vilkår &amp; Betingelser</a></li>
-                    <li><a href="/privacy" class="text-white text-decoration-none">Privatlivspolitik</a></li>
-                    <li><a href="/contact" class="text-white text-decoration-none">Kontakt Os</a></li>
-                </ul>
-            </div>
-
-            <div class="col-md-4">
-                <h5 class="fw-bold mb-3">Følg Os</h5>
-                <div class="d-flex gap-2">
-                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-facebook"></i></a>
-                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-twitter"></i></a>
-                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"><i class="bi bi-instagram"></i></a>
-                </div>
-            </div>
-        </div>
-        <hr class="border-secondary my-4" />
-        <p class="text-center small opacity-75 mb-0">&copy; @DateTime.Now.Year LaptopMarket. Alle rettigheder forbeholdes.</p>
-    </div>
-</footer>
-
-@code {
-    private readonly RegisterModel register = new();
-
-    private void NavigateLogin() => NavManager.NavigateTo("/login");
-
-    private void HandleValidSubmit()
-    {
-        // TODO: kald backend / DBService for at oprette bruger
-        Console.WriteLine($"Ny bruger: {register.FullName} ({register.Email})");
-        NavManager.NavigateTo("/account");
-    }
-
-    private class RegisterModel
-    {
-        [Required(ErrorMessage = "Fulde navn er påkrævet")]
-        public string FullName { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Email er påkrævet")]
-        [EmailAddress(ErrorMessage = "Ugyldig email adresse")]
-        public string Email { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Adgangskode er påkrævet")]
-        [MinLength(6, ErrorMessage = "Adgangskoden skal mindst være 6 tegn")]
-        public string Password { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Bekræft adgangskode")]
-        [Compare(nameof(Password), ErrorMessage = "Adgangskoderne matcher ikke")]
-        public string ConfirmPassword { get; set; } = string.Empty;
-
-        public string? Phone { get; set; }
-        public string? Address { get; set; }
-        public string? City { get; set; }
-        public string? PostalCode { get; set; }
-
-        [Range(typeof(bool), "true", "true", ErrorMessage = "Du skal acceptere vilkår og betingelser")]
-        public bool AcceptTerms { get; set; }
-    }
-}

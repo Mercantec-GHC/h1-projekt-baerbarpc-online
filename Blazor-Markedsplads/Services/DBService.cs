@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using BlazorMarkedsplads.Models;
 using System.Text;
+using System.Data;
 
 namespace BlazorMarkedsplads.Services
 {
@@ -378,8 +379,196 @@ namespace BlazorMarkedsplads.Services
             var idObj = await cmd.ExecuteScalarAsync();
             return Convert.ToInt32(idObj);
         }
+        /* =========================================================
+ *  USERS – CRUD-hjælpere til CreateUser / Login / Profile
+ * ========================================================= */
+
+        /// <summary>
+        /// Henter alle annoncer (listings) for en given bruger (user_id),
+        /// og join’er med product_models for at få specs/pris.
+        /// </summary>
+        public async Task<List<ListingCardModel>> GetListingsByUserIdAsync(int userId)
+        {
+            var list = new List<ListingCardModel>();
+
+            // Her antager vi, at vi har sat 'listings'‐tabellen op som:
+            //   id, product_id, user_id, title, description, phone, location, created_utc
+            // Og at product_models‐tabellen har felter: brand, model, price etc.
+            //
+            // Vi join’er så på product_id for at hente CPU/RAM/etc. (i Subtitle)
+
+            const string sql = @"
+SELECT 
+    l.id                   AS listing_id,
+    l.title                AS title,
+    pm.brand               AS brand,
+    pm.model               AS model,
+    pm.cpu                 AS cpu,
+    pm.ram                 AS ram,
+    pm.storage             AS storage,
+    pm.price               AS price,
+    l.created_utc          AS created_utc
+    -- Du kan lægge flere felter ind her, fx status fra l.status, views osv.
+FROM listings AS l
+JOIN product_models AS pm
+    ON l.product_id = pm.id
+WHERE l.user_id = @uid
+ORDER BY l.created_utc DESC;
+";
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@uid", userId);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                // Vi samler Subtitle: “cpu, ram RAM, storage”
+                var cpu = reader.GetString(reader.GetOrdinal("cpu"));
+                var ram = reader.GetString(reader.GetOrdinal("ram"));
+                var storage = reader.GetString(reader.GetOrdinal("storage"));
+                var subtitle = $"{cpu}, {ram} RAM, {storage}";
+
+                // Hent prisen (gemt som tekst “12 499 kr” eller lignende),
+                // konverter til decimal hvis du har brug for det:
+                var rawPrice = reader.GetString(reader.GetOrdinal("price"));
+                var priceVal = CleanPrice(rawPrice);
+
+                // Opret model‐instans
+                list.Add(new ListingCardModel
+                {
+                    ListingId = reader.GetInt32(reader.GetOrdinal("listing_id")),
+                    Title = reader.GetString(reader.GetOrdinal("title")),
+                    Subtitle = subtitle,
+                    Price = priceVal,
+                    CreatedUtc = reader.GetDateTime(reader.GetOrdinal("created_utc")),
+                    // For Views / Status: enten tilføj kolonne "views" og "status" i SQL‐query,
+                    // eller sæt dummy‐værdi:
+                    Views = 0,           // alternativt hent r.GetInt32("views")
+                    Status = "Aktiv"      // eller tag det fra reader.GetString("status") 
+                });
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// Hjælpefunktion til at konvertere den tekst‐pris, vi gemmer i DB, til decimal‐format.
+        /// Fjerner alt ikke‐numerisk og konverterer til integer.
+        /// </summary>
+        private static decimal CleanPrice(string raw)
+        {
+            // Træk cifre ud (lader os konvertere “12 499 kr” til 12499)
+            var digits = new string(raw.Where(char.IsDigit).ToArray());
+            if (int.TryParse(digits, out var v))
+                return v;
+            return 0m;
+        }
+
+
+
+        public async Task<int> InsertUserAsync(User u)
+        {
+            const string sql = @"
+        INSERT INTO users (name,email,password,phone,address,city,zip_code)
+        VALUES           (@name,@mail,@pwd,@phone,@addr,@city,@zip)
+        RETURNING id;";
+
+            await using var c = new NpgsqlConnection(_connectionString);
+            await c.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, c);
+            cmd.Parameters.AddWithValue("@name", u.Name);
+            cmd.Parameters.AddWithValue("@mail", u.Email);
+            cmd.Parameters.AddWithValue("@pwd", u.Password);      // ← hash i produktion!
+            cmd.Parameters.AddWithValue("@phone", u.Phone ?? "");
+            cmd.Parameters.AddWithValue("@addr", u.Address ?? "");
+            cmd.Parameters.AddWithValue("@city", u.City ?? "");
+            cmd.Parameters.AddWithValue("@zip", u.ZipCode ?? "");
+
+            var idObj = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(idObj);
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            const string sql = "SELECT * FROM users WHERE email = @e LIMIT 1;";
+            await using var c = new NpgsqlConnection(_connectionString);
+            await c.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, c);
+            cmd.Parameters.AddWithValue("@e", email);
+
+            await using var r = await cmd.ExecuteReaderAsync();
+            if (await r.ReadAsync())
+                return new User
+                {
+                    Id = r.GetInt32("id"),
+                    Name = r.GetString("name"),
+                    Email = r.GetString("email"),
+                    Password = r.GetString("password"),
+                    Phone = r.GetString("phone"),
+                    Address = r.GetString("address"),
+                    City = r.GetString("city"),
+                    ZipCode = r.GetString("zip_code")
+                };
+            return null;
+        }
+
+        public async Task<User?> GetUserByIdAsync(int id)
+        {
+            const string sql = "SELECT * FROM users WHERE id = @id;";
+            await using var c = new NpgsqlConnection(_connectionString);
+            await c.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, c);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            await using var r = await cmd.ExecuteReaderAsync();
+            return await r.ReadAsync()
+                ? new User
+                {
+                    Id = id,
+                    Name = r.GetString("name"),
+                    Email = r.GetString("email"),
+                    Password = r.GetString("password"),
+                    Phone = r.GetString("phone"),
+                    Address = r.GetString("address"),
+                    City = r.GetString("city"),
+                    ZipCode = r.GetString("zip_code")
+                }
+                : null;
+        }
+
+        public async Task UpdateUserAsync(User u)
+        {
+            const string sql = @"
+        UPDATE users SET
+            name      = @name,
+            phone     = @phone,
+            address   = @addr,
+            city      = @city,
+            zip_code  = @zip
+        WHERE id = @id;";
+
+            await using var c = new NpgsqlConnection(_connectionString);
+            await c.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, c);
+            cmd.Parameters.AddWithValue("@name", u.Name);
+            cmd.Parameters.AddWithValue("@phone", u.Phone ?? "");
+            cmd.Parameters.AddWithValue("@addr", u.Address ?? "");
+            cmd.Parameters.AddWithValue("@city", u.City ?? "");
+            cmd.Parameters.AddWithValue("@zip", u.ZipCode ?? "");
+            cmd.Parameters.AddWithValue("@id", u.Id);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+
 
     }
+
+
+
+
 
 }
 

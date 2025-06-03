@@ -21,14 +21,14 @@ namespace BlazorMarkedsplads.Services
                 INSERT INTO listings
                     (product_id, user_id, title, description, phone, location, created_utc)
                 VALUES
-                    (@pid, @uid, @title, @desc, @phone, @loc, @created)
+                    (@productid, @uid, @title, @desc, @phone, @loc, @created)
                 RETURNING id;";
 
             await using var conn = new NpgsqlConnection(_cs);
             await conn.OpenAsync();
 
             await using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@pid", l.ProductId);
+            cmd.Parameters.AddWithValue("@productid", l.ProductId);
             cmd.Parameters.AddWithValue("@uid", l.UserId);
             cmd.Parameters.AddWithValue("@title", l.Title);
             cmd.Parameters.AddWithValue("@desc", l.Description);
