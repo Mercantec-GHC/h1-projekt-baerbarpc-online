@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Blazor_Markedsplads.Models;
 using Microsoft.Extensions.Configuration;
@@ -34,23 +33,25 @@ namespace Blazor_Markedsplads.Services
             await conn.OpenAsync();
 
             await using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@brand", listing.Brand ?? string.Empty);
-            cmd.Parameters.AddWithValue("@model", listing.Model ?? string.Empty);
-            cmd.Parameters.AddWithValue("@gpu", listing.Gpu ?? string.Empty);
-            cmd.Parameters.AddWithValue("@cpu", listing.Cpu ?? string.Empty);
+            cmd.Parameters.AddWithValue("@brand", listing.Brand);
+            cmd.Parameters.AddWithValue("@model", listing.Model);
+            cmd.Parameters.AddWithValue("@gpu", listing.Gpu);
+            cmd.Parameters.AddWithValue("@cpu", listing.Cpu);
             cmd.Parameters.AddWithValue("@ram", listing.Ram);
             cmd.Parameters.AddWithValue("@storage", listing.Storage);
-            cmd.Parameters.AddWithValue("@os", listing.OS ?? string.Empty);
-            cmd.Parameters.AddWithValue("@price", listing.Price ?? string.Empty);
-            cmd.Parameters.AddWithValue("@screen_size", listing.ScreenSize ?? string.Empty);
-            cmd.Parameters.AddWithValue("@condition", listing.Condition ?? string.Empty);
+            cmd.Parameters.AddWithValue("@os", listing.OS);
 
-            cmd.Parameters.AddWithValue("@title", listing.Title ?? string.Empty);
-            cmd.Parameters.AddWithValue("@description", listing.Description ?? string.Empty);
-            cmd.Parameters.AddWithValue("@phone", listing.Phone ?? string.Empty);
-            cmd.Parameters.AddWithValue("@location", listing.Location ?? string.Empty);
+            // Price er decimal → DB-kolonnen skal være NUMERIC(10,2) eller lignende
+            cmd.Parameters.AddWithValue("@price", listing.Price);
+
+            cmd.Parameters.AddWithValue("@screen_size", listing.ScreenSize);
+            cmd.Parameters.AddWithValue("@condition", listing.Condition);
+
+            cmd.Parameters.AddWithValue("@title", listing.Title);
+            cmd.Parameters.AddWithValue("@description", listing.Description);
+            cmd.Parameters.AddWithValue("@phone", listing.Phone);
+            cmd.Parameters.AddWithValue("@location", listing.Location);
             cmd.Parameters.AddWithValue("@created", listing.CreatedUtc);
-
 
             var idObj = await cmd.ExecuteScalarAsync();
             return Convert.ToInt32(idObj);
@@ -60,15 +61,17 @@ namespace Blazor_Markedsplads.Services
         {
             var list = new List<Listing>();
 
+            // Direkte sortering på price (NUMERIC) i stedet for regexp_replace
             const string sql = @"
                 SELECT *
                   FROM listings
-                 ORDER BY (regexp_replace(price, '[^0-9]', '', 'g'))::int DESC
+                 ORDER BY price DESC
                  LIMIT @take;
             ";
 
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
+
             await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@take", take);
 
@@ -85,7 +88,10 @@ namespace Blazor_Markedsplads.Services
                     Ram = reader.GetInt32(reader.GetOrdinal("ram")),
                     Storage = reader.GetInt32(reader.GetOrdinal("storage")),
                     OS = reader.GetString(reader.GetOrdinal("os")),
-                    Price = reader.GetString(reader.GetOrdinal("price")),
+
+                    // Læs price som DECIMAL
+                    Price = reader.GetDecimal(reader.GetOrdinal("price")),
+
                     ScreenSize = reader.GetString(reader.GetOrdinal("screen_size")),
                     Condition = reader.GetString(reader.GetOrdinal("condition")),
 
@@ -94,8 +100,6 @@ namespace Blazor_Markedsplads.Services
                     Phone = reader.GetString(reader.GetOrdinal("phone")),
                     Location = reader.GetString(reader.GetOrdinal("location")),
                     CreatedUtc = reader.GetDateTime(reader.GetOrdinal("created_utc")),
-
-
                 });
             }
 
@@ -120,6 +124,7 @@ namespace Blazor_Markedsplads.Services
 
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
+
             await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@t", $"%{term}%");
 
@@ -136,7 +141,10 @@ namespace Blazor_Markedsplads.Services
                     Ram = reader.GetInt32(reader.GetOrdinal("ram")),
                     Storage = reader.GetInt32(reader.GetOrdinal("storage")),
                     OS = reader.GetString(reader.GetOrdinal("os")),
-                    Price = reader.GetString(reader.GetOrdinal("price")),
+
+                    // Læs price som DECIMAL
+                    Price = reader.GetDecimal(reader.GetOrdinal("price")),
+
                     ScreenSize = reader.GetString(reader.GetOrdinal("screen_size")),
                     Condition = reader.GetString(reader.GetOrdinal("condition")),
 
@@ -145,8 +153,6 @@ namespace Blazor_Markedsplads.Services
                     Phone = reader.GetString(reader.GetOrdinal("phone")),
                     Location = reader.GetString(reader.GetOrdinal("location")),
                     CreatedUtc = reader.GetDateTime(reader.GetOrdinal("created_utc")),
-
-
                 });
             }
 
@@ -166,6 +172,7 @@ namespace Blazor_Markedsplads.Services
 
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
+
             await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@uid", userId);
 
@@ -182,7 +189,10 @@ namespace Blazor_Markedsplads.Services
                     Ram = reader.GetInt32(reader.GetOrdinal("ram")),
                     Storage = reader.GetInt32(reader.GetOrdinal("storage")),
                     OS = reader.GetString(reader.GetOrdinal("os")),
-                    Price = reader.GetString(reader.GetOrdinal("price")),
+
+                    // Læs price som DECIMAL
+                    Price = reader.GetDecimal(reader.GetOrdinal("price")),
+
                     ScreenSize = reader.GetString(reader.GetOrdinal("screen_size")),
                     Condition = reader.GetString(reader.GetOrdinal("condition")),
 
@@ -191,7 +201,6 @@ namespace Blazor_Markedsplads.Services
                     Phone = reader.GetString(reader.GetOrdinal("phone")),
                     Location = reader.GetString(reader.GetOrdinal("location")),
                     CreatedUtc = reader.GetDateTime(reader.GetOrdinal("created_utc")),
-
                 });
             }
 
@@ -209,6 +218,7 @@ namespace Blazor_Markedsplads.Services
 
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
+
             await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", id);
 
@@ -226,7 +236,10 @@ namespace Blazor_Markedsplads.Services
                 Ram = reader.GetInt32(reader.GetOrdinal("ram")),
                 Storage = reader.GetInt32(reader.GetOrdinal("storage")),
                 OS = reader.GetString(reader.GetOrdinal("os")),
-                Price = reader.GetString(reader.GetOrdinal("price")),
+
+                // Læs price som DECIMAL
+                Price = reader.GetDecimal(reader.GetOrdinal("price")),
+
                 ScreenSize = reader.GetString(reader.GetOrdinal("screen_size")),
                 Condition = reader.GetString(reader.GetOrdinal("condition")),
 

@@ -4,7 +4,6 @@
 @using BlazorMarkedsplads.Models
 @inject NavigationManager NavManager
 @inject IUserRepository UserRepo
-@inject DBService DbService
 @inject IJSRuntime JSRuntime
 @inject IListingRepository ListingRepo
 @rendermode InteractiveServer
@@ -188,7 +187,7 @@
 
     private int userId;
     private ProfileModel profile = new();
-    private List<ListingCardModel>? UserAds;
+
 
     // Vi sætter en flag, så vi kun henter JS én gang i OnAfterRenderAsync
     private bool _hasFetchedFromLocalStorage = false;
@@ -232,11 +231,6 @@
             profile.City = u.City;
             profile.Zip = u.ZipCode;
 
-            // 3) Hent alle listings for denne bruger
-            UserAds = await DbService.GetListingsByUserIdAsync(userId);
-
-            // Efter vi har opdateret state, skal vi kalde StateHasChanged()
-            // for at få UI til at opdatere sig med de indlæste data
             StateHasChanged();
         }
     }

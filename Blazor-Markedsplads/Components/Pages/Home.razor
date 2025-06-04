@@ -131,13 +131,13 @@
         }
     }
 
-    private static string FormatPrice(string raw)
+    private static string FormatPrice(decimal price)
     {
-        if (string.IsNullOrWhiteSpace(raw))
-            return raw;
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        return int.TryParse(digits, out var val)
-            ? $"{val:N0} kr"
-            : raw;
+        // Hvis prisen er 0 (eller man vil håndtere null), kan man tjekke det:
+        if (price <= 0)
+            return "0 kr";
+
+        // ToString("N0") viser tusindtalsseparator uden decimaler: fx 3.500
+        return $"{price.ToString("N0")} kr";
     }
 }

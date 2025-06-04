@@ -1,113 +1,42 @@
-﻿@page "/ListingsDetailsPage/{Id:int}"
+﻿@page "/ListingsDetailsPage"
 @inject IListingRepository ListingRepo
-@rendermode InteractiveServer
+@inject NavigationManager NavManager
 
 <PageTitle>Annonce Detaljer</PageTitle>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
-            <i class="bi bi-laptop"></i> LaptopMarket
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="mainNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink>
-                </li>
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="/ListingsPage" ActiveClass="active">Annoncer</NavLink>
-                </li>
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="/CreateListing" ActiveClass="active">Opret Annonce</NavLink>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
+<div class="container py-5">
+    <h3>Annonce detaljer</h3>
 
-@if (currentListing == null)
-{
-    <div class="container py-5">
-        @if (!string.IsNullOrEmpty(loadError))
-        {
-            <div class="alert alert-danger">@loadError</div>
-        }
-        else
-        {
-            <p class="text-muted">Indlæser annoncedetaljer…</p>
-        }
-    </div>
-}
-else
-{
-    <div class="container py-5">
-        <h2>@($"{currentListing.Brand} {currentListing.Model}")</h2>
-        <p class="small text-muted">@currentListing.Title</p>
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <img src="images/laptop-placeholder.svg"
-                     alt="Billede af @($"{currentListing.Brand} {currentListing.Model}")"
-                     class="img-fluid mb-3" />
-            </div>
-            <div class="col-md-4">
-                <h4 class="text-success">@FormatPrice(currentListing.Price)</h4>
-                <p>@currentListing.Cpu, @currentListing.Ram RAM, @currentListing.Storage GB</p>
-                <p><strong>OS:</strong> @currentListing.OS</p>
-                <p><strong>Condition:</strong> @currentListing.Condition</p>
-                <hr />
-                <h5>Kontakt</h5>
-                <p><i class="bi bi-telephone"></i> @currentListing.Phone</p>
-                <p><i class="bi bi-geo-alt"></i> @currentListing.Location</p>
-                <p class="small text-muted">
-                    Oprettet: @currentListing.CreatedUtc.ToLocalTime().ToString("dd-MM-yyyy HH:mm")
+    @if (listing == null)
+    {
+        <div class="alert alert-warning">Kunne ikke finde annoncen med ID = @Id.</div>
+        <button class="btn btn-secondary mt-3" @onclick="BackToList">Tilbage til oversigten</button>
+    }
+    else
+    {
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">@listing.Title</h5>
+                <p class="card-text">
+                    <strong>Mærke:</strong> @listing.Brand<br />
+                    <strong>Model:</strong> @listing.Model<br />
+                    <strong>Pris:</strong> @listing.Price.ToString("N0") kr.<br />
+                    <strong>Beskrivelse:</strong><br />@listing.Description
                 </p>
+                <button class="btn btn-primary" @onclick="BackToList">Tilbage til oversigten</button>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-12">
-                <h5>Beskrivelse</h5>
-                <p>@currentListing.Description</p>
-            </div>
-        </div>
-    </div>
-}
+    }
+</div>
 
 @code {
-    [Parameter]
-    public int Id { get; set; }
+    [Parameter] public int Id { get; set; }
+    private Listing? listing;
 
-    private Listing? currentListing;
-    private string? loadError;
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        try
-        {
-            currentListing = await ListingRepo.GetByIdAsync(Id);
-            if (currentListing == null)
-            {
-                loadError = "Annonce ikke fundet.";
-            }
-        }
-        catch (Exception ex)
-        {
-            loadError = $"Fejl ved hentning af detaljer: {ex.Message}";
-        }
+        listing = await ListingRepo.GetByIdAsync(Id);
     }
 
-    private static string FormatPrice(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return raw;
-
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        return int.TryParse(digits, out var val) 
-            ? $"{val:N0} kr" 
-            : raw;
-    }
+    private void BackToList() => NavManager.NavigateTo("/ListingsPage");
 }

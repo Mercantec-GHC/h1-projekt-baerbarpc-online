@@ -86,7 +86,7 @@
     {
         try
         {
-            // Henter alle (eller brug en dedikeret metode hentAlle, hvis ønsket)
+            // Henter de første 100 (eller færre, hvis der ikke findes 100)
             allListings = await ListingRepo.GetPremiumAsync(100);
         }
         catch (Exception ex)
@@ -99,6 +99,7 @@
     {
         if (string.IsNullOrWhiteSpace(filterTerm))
         {
+            // Hvis intet filter er tastet, hent alt igen
             await OnInitializedAsync();
         }
         else
@@ -106,6 +107,7 @@
             try
             {
                 allListings = await ListingRepo.SearchAsync(filterTerm);
+                errorMsg = null;
             }
             catch (Exception ex)
             {
@@ -114,16 +116,15 @@
         }
     }
 
-    private void NavigateToDetails(int id) => NavManager.NavigateTo($"/ListingsDetailsPage/{id}");
+    private void NavigateToDetails(int id) =>
+        NavManager.NavigateTo($"/ListingsDetailsPage/{id}");
 
-    private static string FormatPrice(string raw)
+    private static string FormatPrice(decimal price)
     {
-        if (string.IsNullOrWhiteSpace(raw))
-            return raw;
+        if (price <= 0)
+            return "0 kr";
 
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        return int.TryParse(digits, out var val)
-            ? $"{val:N0} kr"
-            : raw;
+        // ToString("N0") formatterer tal med tusindtals-separator uden decimaler, fx "3 500"
+        return $"{price.ToString("N0")} kr";
     }
 }
