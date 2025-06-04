@@ -1,12 +1,15 @@
-﻿// Services/IListingRepository.cs
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using BlazorMarkedplads.Models;
-using BlazorMarkedsplads.Models;          //  ←  vigtigt, ellers kender interfacet ikke Listing
+using Blazor_Markedsplads.Models;
 
-namespace BlazorMarkedsplads.Services     //  SAME namespace i ALLE service-filer
+namespace Blazor_Markedsplads.Services
 {
     public interface IListingRepository
     {
         Task<int> InsertAsync(Listing listing);
+        Task<List<Listing>> GetPremiumAsync(int take = 4);
+        Task<List<Listing>> SearchAsync(string term);
+        Task<List<Listing>> GetByUserIdAsync(int userId);
+        Task<Listing?> GetByIdAsync(int id);
     }
 }

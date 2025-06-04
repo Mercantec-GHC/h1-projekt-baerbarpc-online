@@ -1,303 +1,129 @@
 ﻿@page "/ListingsPage"
-@using System.Web
-@using BlazorMarkedsplads.Models
-@using BlazorMarkedsplads.Components
-@inject DBService Db
-@inject NavigationManager Nav
+@inject IListingRepository ListingRepo
+@inject NavigationManager NavManager
 @rendermode InteractiveServer
 
-<PageTitle>Listings Page</PageTitle>
+<PageTitle>Alle Annoncer</PageTitle>
 
-<div class="row">
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
+            <i class="bi bi-laptop"></i> LaptopMarket
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/ListingsPage" ActiveClass="active">Annoncer</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/CreateListing" ActiveClass="active">Opret Annonce</NavLink>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
-    <!-- ---------- FILTERPANEL ---------- -->
-    <aside class="col-lg-3 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="fw-bold mb-3">Filtre</h5>
+<div class="container py-5">
+    <h3>Alle Annoncer</h3>
 
-                <!-- Brand -->
-                <FilterSection Title="Mærke">
-                    @foreach (var b in Opts.Brands)
-                    {
-                        <FilterCheckbox Item="@b"
-                                        Checked="@Filters.Brand.Contains(b)"
-                                        Changed="e => Toggle(Filters.Brand, b, e)" />
-                    }
-                </FilterSection>
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <InputText @bind-Value="filterTerm" placeholder="Søg på brand/model/..." class="form-control" />
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-primary w-100" @onclick="PerformSearch">Søg</button>
+        </div>
+    </div>
 
-                <!-- Model fritekst -->
-                <FilterSection Title="Model">
-                    <input class="form-control form-control-sm"
-                           placeholder="F.eks. MacBook"
-                           @bind="Filters.ModelSearch" />
-                </FilterSection>
-
-                <!-- Skærmstørrelse -->
-                <FilterSection Title="Skærmstørrelse">
-                    @foreach (var s in Opts.ScreenSizes)
-                    {
-                        <FilterCheckbox Item="@s"
-                                        Checked="@Filters.ScreenSize.Contains(s)"
-                                        Changed="e => Toggle(Filters.ScreenSize, s, e)" />
-                    }
-                </FilterSection>
-
-                <!-- CPU -->
-                <FilterSection Title="CPU">
-                    @foreach (var c in Opts.Cpus)
-                    {
-                        <FilterCheckbox Item="@c"
-                                        Checked="@Filters.Cpu.Contains(c)"
-                                        Changed="e => Toggle(Filters.Cpu, c, e)" />
-                    }
-                </FilterSection>
-
-                <!-- RAM -->
-                <FilterSection Title="RAM">
-                    @foreach (var r in Opts.Rams)
-                    {
-                        <FilterCheckbox Item="@r"
-                                        Checked="@Filters.Ram.Contains(r)"
-                                        Changed="e => Toggle(Filters.Ram, r, e)" />
-                    }
-                </FilterSection>
-
-                <!-- Lagring -->
-                <FilterSection Title="Lagring">
-                    @foreach (var st in Opts.Storages)
-                    {
-                        <FilterCheckbox Item="@st"
-                                        Checked="@Filters.Storage.Contains(st)"
-                                        Changed="e => Toggle(Filters.Storage, st, e)" />
-                    }
-                </FilterSection>
-
-                <!-- Tilstand (radio) -->
-                <FilterSection Title="Tilstand">
-                    @foreach (var cond in Opts.Conditions)
-                    {
-                        <div class="form-check">
-                            <input type="radio" class="form-check-input" name="cond"
-                                   value="@cond"
-                                   @onchange="@((ChangeEventArgs _) => SelectedCondition = cond)"
-                                   checked="@(SelectedCondition == cond)" />
-                            <label class="form-check-label">@cond</label>
+    @if (!string.IsNullOrWhiteSpace(errorMsg))
+    {
+        <div class="alert alert-danger">@errorMsg</div>
+    }
+    else if (allListings?.Any() == true)
+    {
+        <div class="row g-4">
+            @foreach (var p in allListings)
+            {
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card h-100 shadow-sm border-0">
+                        <img src="images/laptop-placeholder.svg"
+                             class="card-img-top product-img"
+                             alt="@($"{p.Brand} {p.Model}")" />
+                        <div class="card-body">
+                            <h5 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h5>
+                            <p class="card-text small text-muted">@($"{p.Cpu}, {p.Ram} RAM, {p.Storage} GB")</p>
+                            <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
                         </div>
-                    }
-                </FilterSection>
-
-                <!-- Prisinterval -->
-                <FilterSection Title="Prisinterval">
-                    <input type="range" class="form-range" min="1" max="100000" step="100"
-                           @bind="SliderMin" />
-                    <input type="range" class="form-range" min="1" max="100000" step="100"
-                           @bind="SliderMax" />
-                    <div class="d-flex justify-content-between small">
-                        <span>@SliderMin.ToString("N0") kr</span>
-                        <span>@SliderMax.ToString("N0") kr</span>
+                        <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
+                            <button class="btn btn-sm btn-light" @onclick="() => NavigateToDetails(p.Id)">
+                                <i class="bi bi-arrow-right-circle"></i>
+                            </button>
+                        </div>
                     </div>
-                </FilterSection>
-
-                <!-- OS -->
-                <FilterSection Title="Operativsystem">
-                    @foreach (var os in Opts.OSes)
-                    {
-                        <FilterCheckbox Item="@os"
-                                        Checked="@Filters.OS.Contains(os)"
-                                        Changed="e => Toggle(Filters.OS, os, e)" />
-                    }
-                </FilterSection>
-
-                <!-- Placeholders -->
-                <FilterSection Title="Anvendelse (placeholder)">
-                    @foreach (var u in new[] { "Gaming", "Studier", "Arbejde", "Video" })
-                    {
-                        <FilterCheckbox Item="@u"
-                                        Checked="@Filters.Usage.Contains(u)"
-                                        Changed="e => Toggle(Filters.Usage, u, e)" />
-                    }
-                </FilterSection>
-
-                <FilterSection Title="Placering (placeholder)">
-                    <input class="form-control form-control-sm"
-                           placeholder="postnr"
-                           @bind="Filters.Location" />
-                </FilterSection>
-
-                <!-- Knapper -->
-                <div class="d-grid gap-2">
-                    <button class="btn btn-primary btn-sm" @onclick="ApplyFilters">Anvend Filtre</button>
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="ResetFilters">Nulstil</button>
                 </div>
-            </div>
+            }
         </div>
-    </aside>
-
-    <!-- ---------- LISTINGS ---------- -->
-    <main class="col-lg-9">
-        <h5 class="fw-semibold mb-3">@($"{TotalCount:N0} Annoncer")</h5>
-
-        <div class="d-flex justify-content-end mb-2">
-            <select class="form-select form-select-sm w-auto"
-                    value="@Order"
-                    @onchange="OnOrderChanged">
-                <option value="priceDesc">Sortér: Pris ↓</option>
-                <option value="priceAsc">Sortér: Pris ↑</option>
-            </select>
-        </div>
-
-        @if (isBusy)
-        {
-            <p><em>Indlæser …</em></p>
-        }
-        else if (!View.Any())
-        {
-            <p>Ingen resultater.</p>
-        }
-        else
-        {
-            <div class="row g-4">
-                @foreach (var p in View)
-                {
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <div class="card h-100 shadow-sm border-0">
-                            <img src="images/laptop-placeholder.svg"
-                                 style="height:140px;object-fit:contain"
-                                 class="card-img-top"
-                                 alt="@($"{p.Brand} {p.Model}")" />
-                            <div class="card-body">
-                                <h6 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h6>
-                                <p class="card-text small text-muted mb-1">
-                                    @($"{p.Cpu}, {p.Ram} RAM, {p.Storage}")
-                                </p>
-                                <p class="card-text fw-bold text-success mb-0">
-                                    @FormatPrice(p.Price)
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-
-            <!-- Pagination -->
-            <nav class="mt-4">
-                <ul class="pagination justify-content-center">
-                    <li class="page-item @(CurrentPage == 1 ? "disabled" : null)">
-                        <button class="page-link" @onclick="() => GoToPage(CurrentPage - 1)">«</button>
-                    </li>
-                    @for (int i = 1; i <= TotalPages; i++)
-                    {
-                        <li class="page-item @(CurrentPage == i ? "active" : null)">
-                            <button class="page-link" @onclick="() => GoToPage(i)">@i</button>
-                        </li>
-                    }
-                    <li class="page-item @(CurrentPage == TotalPages ? "disabled" : null)">
-                        <button class="page-link" @onclick="() => GoToPage(CurrentPage + 1)">»</button>
-                    </li>
-                </ul>
-            </nav>
-        }
-    </main>
+    }
+    else
+    {
+        <p class="text-muted">Ingen annoncer fundet.</p>
+    }
 </div>
 
 @code {
-    /* -------- options fra DB -------- */
-    private FilterOptions Opts = new();
+    private List<Listing> allListings = new();
+    private string filterTerm = "";
+    private string? errorMsg;
 
-    /* -------- query-string -------- */
-    [SupplyParameterFromQuery] public int? page { get; set; }
-    [SupplyParameterFromQuery] public string? order { get; set; }
-
-    /* -------- state -------- */
-    private ListingFilter Filters = new();
-    private int SliderMin = 1, SliderMax = 100_000;
-
-    private bool isBusy;
-    private int PageSize = 12;
-    private int CurrentPage = 1;
-    private int TotalPages = 1;
-    private int TotalCount = 0;
-    private string Order = "priceDesc";
-
-    private List<ProductModel> Data = [];
-    private IEnumerable<ProductModel> View => Data.Skip((CurrentPage - 1) * PageSize)
-                                                  .Take(PageSize);
-
-    /* -------- lifecycle -------- */
     protected override async Task OnInitializedAsync()
     {
-        Opts = await Db.GetFilterOptionsAsync();
+        try
+        {
+            // Henter alle (eller brug en dedikeret metode hentAlle, hvis ønsket)
+            allListings = await ListingRepo.GetPremiumAsync(100);
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Fejl ved hentning: {ex.Message}";
+        }
     }
-    protected override async Task OnParametersSetAsync()
+
+    private async Task PerformSearch()
     {
-        CurrentPage = page ?? 1;
-        Order = order ?? "priceDesc";
-        await Reload();
+        if (string.IsNullOrWhiteSpace(filterTerm))
+        {
+            await OnInitializedAsync();
+        }
+        else
+        {
+            try
+            {
+                allListings = await ListingRepo.SearchAsync(filterTerm);
+            }
+            catch (Exception ex)
+            {
+                errorMsg = $"Fejl ved søgning: {ex.Message}";
+            }
+        }
     }
 
-    /* -------- helpers -------- */
-    private void Toggle(List<string> list, string v, ChangeEventArgs e)
+    private void NavigateToDetails(int id) => NavManager.NavigateTo($"/ListingsDetailsPage/{id}");
+
+    private static string FormatPrice(string raw)
     {
-        if ((bool)e.Value!) { if (!list.Contains(v)) list.Add(v); }
-        else { list.Remove(v); }
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        var digits = new string(raw.Where(char.IsDigit).ToArray());
+        return int.TryParse(digits, out var val)
+            ? $"{val:N0} kr"
+            : raw;
     }
-    private string? SelectedCondition
-    {
-        get => Filters.Condition.FirstOrDefault();
-        set => Filters.Condition = string.IsNullOrWhiteSpace(value) ? [] : [value!];
-    }
-    private void OnOrderChanged(ChangeEventArgs e)
-    {
-        Order = e.Value?.ToString() ?? "priceDesc";
-        ApplyFilters();
-    }
-
-    /* -------- data -------- */
-    private async Task Reload()
-    {
-        isBusy = true; StateHasChanged();
-
-        Filters.MinPrice = SliderMin;
-        Filters.MaxPrice = SliderMax;
-
-        Data = await Db.SearchProductModelsAsync(Filters, Order);
-        TotalCount = Data.Count;
-        TotalPages = Math.Max(1, (int)Math.Ceiling((double)TotalCount / PageSize));
-        CurrentPage = Math.Clamp(CurrentPage, 1, TotalPages);
-
-        isBusy = false;
-    }
-
-    /* -------- navigation -------- */
-    private void ApplyFilters() { CurrentPage = 1; Nav.NavigateTo($"ListingsPage{BuildQS()}"); }
-    private void ResetFilters() { Filters = new(); SliderMin = 1; SliderMax = 100_000; }
-    private void GoToPage(int p) => Nav.NavigateTo($"ListingsPage{BuildQS(p)}");
-
-    private string BuildQS(int? explicitPage = 1)
-    {
-        var q = HttpUtility.ParseQueryString(string.Empty);
-        void Add(string k, IEnumerable<string> v) { foreach (var x in v) q.Add(k, x); }
-
-        Add("brand", Filters.Brand); Add("cpu", Filters.Cpu);
-        Add("ram", Filters.Ram); Add("storage", Filters.Storage);
-        Add("size", Filters.ScreenSize); Add("os", Filters.OS);
-        Add("cond", Filters.Condition); Add("use", Filters.Usage);
-
-        if (!string.IsNullOrWhiteSpace(Filters.ModelSearch)) q.Add("model", Filters.ModelSearch);
-        if (SliderMin != 1) q.Add("min", SliderMin.ToString());
-        if (SliderMax != 100_000) q.Add("max", SliderMax.ToString());
-
-        q.Add("order", Order);
-        q.Add("page", explicitPage?.ToString() ?? "1");
-
-        return "?" + q.ToString()!.Replace("%2c", ",");
-    }
-
-    /* -------- util -------- */
-    private static int CleanPrice(string raw) =>
-        int.TryParse(new string(raw.Where(char.IsDigit).ToArray()), out var v) ? v : 0;
-
-    private static string FormatPrice(string raw) =>
-        CleanPrice(raw) is var p and > 0 ? $"{p:N0} kr" : raw;
 }

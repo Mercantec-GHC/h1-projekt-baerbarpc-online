@@ -1,42 +1,35 @@
-﻿@using Microsoft.AspNetCore.Components
-@attribute [BindProperties]
-@page "/CreateListing"
-@rendermode InteractiveServer
-
-@using System.ComponentModel.DataAnnotations
+﻿@page "/CreateListing"
 @inject NavigationManager NavManager
-
-@* ----- DI-services ----- *@
-@inject BlazorMarkedsplads.Services.DBService DbService
-@inject BlazorMarkedsplads.Services.IListingRepository ListingRepo
-
-@using BlazorMarkedsplads.Models
-@using BlazorMarkedplads.Models            @* (hvis du har ProductModel her) *@
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Mvc
+@inject IListingRepository ListingRepo
+@rendermode InteractiveServer
 
 <PageTitle>Opret Annonce</PageTitle>
 
-<!-- =========  Top Navigation ========= -->
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
     <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
             <i class="bi bi-laptop"></i> LaptopMarket
         </a>
-
-        <span class="navbar-toggler-icon"></span>
-
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
-                <li class="nav-item"><NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/ListingsPage" ActiveClass="active">Annoncer</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/profile" ActiveClass="active">Konto</NavLink></li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/ListingsPage" ActiveClass="active">Annoncer</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/CreateListing" ActiveClass="active">Opret Annonce</NavLink>
+                </li>
             </ul>
         </div>
     </div>
 </nav>
 
-<!-- =========  Formular ========= -->
 <section class="py-5" style="background-color:#f8f9fa; min-height:70vh;">
     <div class="container d-flex justify-content-center">
         <div class="card shadow-sm border-0" style="max-width: 650px; width:100%;">
@@ -44,120 +37,86 @@
                 <h4 class="fw-bold">Opret Annonce</h4>
                 <p class="text-muted mb-4">Udfyld oplysninger om din bærbare computer</p>
 
-                @*  ▸▸  Validering slået fra: bruger OnSubmit  ◂◂ *@
-                <EditForm Model="Listing"
-                          OnSubmit="HandleSubmit"
-                          enctype="multipart/form-data"
-                          FormName="createListingForm"
-                          @bind:after="true">
+                @* Vis generel fejlbesked *@
+                @if (!string.IsNullOrWhiteSpace(formError))
+                {
+                    <div class="alert alert-danger">@formError</div>
+                }
 
-                    <!-- =====  Billed-upload (deaktiveret)  ===== -->
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">
-                            Billeder af din bærbare
-                            <span class="text-muted">(kommer snart)</span>
-                        </label>
-                        <InputFile OnChange="HandleFiles"
-                                   multiple
-                                   accept=".png,.jpg,.jpeg"
-                                   class="border border-secondary-subtle rounded text-center w-100 py-5"
-                                   style="cursor:pointer;"
-                                   disabled />
-                        <small class="d-block text-muted mt-1">
-                            PNG, JPG op til 10&nbsp;MB (maks&nbsp;5 billeder)
-                        </small>
-                    </div>
+                <EditForm Model="createModel"
+                          OnValidSubmit="HandleSubmitValid"
+                          FormName="createListingForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
 
-                    <!-- =====  Formularfelter  ===== -->
                     <div class="row g-3">
-
-                        <!-- Titel -->
+                        <!-- 1) Titel -->
                         <div class="col-12">
                             <label for="title" class="form-label fw-semibold">Overskrift</label>
-                            <InputText id="title" name="Title"
-                                       @bind-Value="Listing.Title"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="title" class="form-control"
+                                       @bind-Value="createModel.Title"
+                                       @bind-Value:event="oninput" />
                         </div>
 
-                        <!-- Brand / Mærke -->
+                        <!-- 2) Brand / Model -->
                         <div class="col-md-6">
                             <label for="brand" class="form-label fw-semibold">Mærke</label>
-                            <InputText id="brand" name="Brand"
-                                       @bind-Value="Listing.Brand"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="brand" class="form-control"
+                                       @bind-Value="createModel.Brand"
+                                       @bind-Value:event="oninput" />
                         </div>
-
-                        <!-- Model -->
                         <div class="col-md-6">
                             <label for="model" class="form-label fw-semibold">Model</label>
-                            <InputText id="model" name="Model"
-                                       @bind-Value="Listing.Model"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="model" class="form-control"
+                                       @bind-Value="createModel.Model"
+                                       @bind-Value:event="oninput" />
                         </div>
 
-                        <!-- CPU -->
+                        <!-- 3) CPU / GPU -->
                         <div class="col-md-6">
                             <label for="cpu" class="form-label fw-semibold">CPU</label>
-                            <InputText id="cpu" name="CPU"
-                                       @bind-Value="Listing.CPU"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="cpu" class="form-control"
+                                       @bind-Value="createModel.CPU"
+                                       @bind-Value:event="oninput" />
                         </div>
-
-                        <!-- GPU -->
                         <div class="col-md-6">
                             <label for="gpu" class="form-label fw-semibold">GPU</label>
-                            <InputText id="gpu" name="GPU"
-                                       @bind-Value="Listing.GPU"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="gpu" class="form-control"
+                                       @bind-Value="createModel.GPU"
+                                       @bind-Value:event="oninput" />
                         </div>
 
-                        <!-- RAM -->
+                        <!-- 4) RAM / Storage -->
                         <div class="col-md-4">
-                            <label for="ram" class="form-label fw-semibold">RAM&nbsp;(GB)</label>
-                            <InputText id="ram" name="RAM"
-                                       @bind-Value="Listing.RAM"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <label for="ram" class="form-label fw-semibold">RAM (GB)</label>
+                            <InputNumber id="ram" class="form-control"
+                                         @bind-Value="createModel.RAM" />
                         </div>
-
-                        <!-- Storage -->
                         <div class="col-md-4">
-                            <label for="storage" class="form-label fw-semibold">Lager&nbsp;(GB)</label>
-                            <InputText id="storage" name="Storage"
-                                       @bind-Value="Listing.Storage"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <label for="storage" class="form-label fw-semibold">Lager (GB)</label>
+                            <InputNumber id="storage" class="form-control"
+                                         @bind-Value="createModel.Storage" />
                         </div>
 
-                        <!-- Skærmstørrelse -->
+                        <!-- 5) Skærmstørrelse -->
                         <div class="col-md-4">
-                            <label for="screenSize" class="form-label fw-semibold">Skærm&nbsp;(")</label>
-                            <InputText id="screenSize" name="ScreenSize"
-                                       @bind-Value="Listing.ScreenSize"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <label for="screenSize" class="form-label fw-semibold">Skærm (")</label>
+                            <InputText id="screenSize" class="form-control"
+                                       @bind-Value="createModel.ScreenSize"
+                                       @bind-Value:event="oninput" />
                         </div>
 
-                        <!-- Styresystem -->
+                        <!-- 6) OS / Condition -->
                         <div class="col-md-6">
                             <label for="os" class="form-label fw-semibold">Styresystem</label>
-                            <InputText id="os" name="OS"
-                                       @bind-Value="Listing.OS"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="os" class="form-control"
+                                       @bind-Value="createModel.OS"
+                                       @bind-Value:event="oninput" />
                         </div>
-
-                        <!-- Tilstand -->
                         <div class="col-md-6">
                             <label for="condition" class="form-label fw-semibold">Tilstand</label>
-                            <InputSelect id="condition" name="Condition"
-                                         @bind-Value="Listing.Condition"
-                                         class="form-select">
+                            <InputSelect id="condition" class="form-select"
+                                         @bind-Value="createModel.Condition">
                                 <option value="">– vælg –</option>
                                 <option>Næsten ny</option>
                                 <option>Let brugt</option>
@@ -166,59 +125,54 @@
                             </InputSelect>
                         </div>
 
-                        <!-- Pris -->
+                        <!-- 7) Pris (kr.) -->
                         <div class="col-md-6">
-                            <label for="price" class="form-label fw-semibold">Pris&nbsp;(kr.)</label>
-                            <InputNumber id="price" name="Price"
-                                         @bind-Value="Listing.Price"
-                                         @bind-Value:event="oninput"
-                                         class="form-control" />
+                            <label for="price" class="form-label fw-semibold">Pris (kr.)</label>
+                            <InputNumber id="price" class="form-control"
+                                         @bind-Value="createModel.Price" />
                         </div>
 
-                        <!-- Telefon -->
+                        <!-- 8) Telefon / Lokation -->
                         <div class="col-md-6">
                             <label for="phone" class="form-label fw-semibold">Telefon</label>
-                            <InputText id="phone" name="Phone"
-                                       @bind-Value="Listing.Phone"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="phone" class="form-control"
+                                       @bind-Value="createModel.Phone"
+                                       @bind-Value:event="oninput" />
                         </div>
-
-                        <!-- Lokation -->
                         <div class="col-md-6">
                             <label for="location" class="form-label fw-semibold">Lokation</label>
-                            <InputText id="location" name="Location"
-                                       @bind-Value="Listing.Location"
-                                       @bind-Value:event="oninput"
-                                       class="form-control" />
+                            <InputText id="location" class="form-control"
+                                       @bind-Value="createModel.Location"
+                                       @bind-Value:event="oninput" />
                         </div>
 
-                        <!-- Beskrivelse -->
+                        <!-- 9) Beskrivelse -->
                         <div class="col-12">
                             <label for="description" class="form-label fw-semibold">Beskrivelse</label>
-                            <InputTextArea id="description" name="Description"
-                                           @bind-Value="Listing.Description"
+                            <InputTextArea id="description" class="form-control"
+                                           @bind-Value="createModel.Description"
                                            @bind-Value:event="oninput"
-                                           class="form-control"
                                            rows="4" />
                         </div>
 
-                        <!-- Vilkår -->
+                        <!-- 10) Vilkår og betingelser -->
                         <div class="col-12 form-check mt-2">
-                            <InputCheckbox id="acceptTerms" name="AcceptTerms"
-                                           @bind-Value="Listing.AcceptTerms"
-                                           class="form-check-input" />
+                            <InputCheckbox id="acceptTerms" class="form-check-input"
+                                           @bind-Value="createModel.AcceptTerms" />
                             <label for="acceptTerms" class="form-check-label">
-                                Jeg accepterer vilkår og betingelser
+                                Jeg accepterer vilkår &amp; betingelser
                             </label>
                         </div>
-
                     </div>
-                    <!-- =====  /Formularfelter  ===== -->
 
+                    <!-- 11) Submit / Fortryd -->
                     <div class="d-flex gap-2 mt-4">
-                        <button class="btn btn-primary flex-grow-1" type="submit">Opret annonce</button>
-                        <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Fortryd</button>
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            Opret annonce
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">
+                            Fortryd
+                        </button>
                     </div>
                 </EditForm>
             </div>
@@ -226,82 +180,60 @@
     </div>
 </section>
 
-@code
-{
-    /* ------------  Form-state ------------ */
-    public ListingModel Listing { get; set; } = new();
+@code {
+    private CreateListingViewModel createModel = new CreateListingViewModel();
+    private string? formError;
 
-    private readonly List<IBrowserFile> images = new();
-    private readonly List<string> imageErrors = new();
-
-    protected override void OnParametersSet()
+    private async Task HandleSubmitValid()
     {
-        Listing ??= new ListingModel();
-    }
-
-    /* ------------  File-handler ------------ */
-    private void HandleFiles(InputFileChangeEventArgs e)
-    {
-        // Deaktiveret – upload-logik kommer i et senere sprint
-        imageErrors.Clear();
-        images.Clear();
-    }
-
-    /* ------------  Submit-handler ------------ */
-    private async Task HandleSubmit()
-    {
-        Console.WriteLine($"[LISTING] Gemmer annonce '{Listing.Title}'");
-
-        /* 1) Gem produktet */
-        int productId = await DbService.InsertProductModelAsync(new ProductModel
+        // 1) Byg Listing-objekt – coalesce alle mulige string-felter til tom streng:
+        var listing = new Listing
             {
-                Brand = Listing.Brand,
-                Model = Listing.Model,
-                Gpu = Listing.GPU,
-                Cpu = Listing.CPU,
-                Ram = Listing.RAM,
-                Storage = Listing.Storage,
-                OS = Listing.OS,
-                Price = Listing.Price?.ToString() ?? "0",
-                ScreenSize = Listing.ScreenSize,
-                Condition = Listing.Condition
-            });
+                Brand = createModel.Brand ?? string.Empty,
+                Model = createModel.Model ?? string.Empty,
+                Gpu = createModel.GPU ?? string.Empty,
+                Cpu = createModel.CPU ?? string.Empty,
+                Ram = createModel.RAM,
+                Storage = createModel.Storage,
+                OS = createModel.OS ?? string.Empty,
+                Price = createModel.Price.ToString(),
+                ScreenSize = createModel.ScreenSize ?? string.Empty,
+                Condition = createModel.Condition ?? string.Empty,
 
-        /* 2) Gem selve annoncen */
-        int id = await ListingRepo.InsertAsync(new Listing
-            {
-                ProductId = productId,
-                UserId = 1, // TODO: brug faktisk bruger-id
-                Title = Listing.Title,
-                Description = Listing.Description,
-                Phone = Listing.Phone,
-                Location = Listing.Location
-            });
+                Title = createModel.Title ?? string.Empty,
+                Description = createModel.Description ?? string.Empty,
+                Phone = createModel.Phone ?? string.Empty,
+                Location = createModel.Location ?? string.Empty,
+                CreatedUtc = DateTime.UtcNow
+            };
 
-        /* 3) Redirect */
-        NavManager.NavigateTo($"/ListingsDetailsPage/{id}");
+        int newId;
+        try
+        {
+            // 2) Indsæt i databasen – returnerer det oprettede Listing-id:
+            newId = await ListingRepo.InsertAsync(listing);
+        }
+        catch (Exception ex)
+        {
+            // Hvis indsættelse fejler, vis fejl til brugeren:
+            formError = $"Kunne ikke oprette annonce: {ex.Message}";
+            return;
+        }
+
+        // 3) Hvis vi kommer hertil, var indsættelsen i databasen en succes.
+        //    Naviger direkte til detalje-siden for det nye id.
+        //
+        //    Bemærk: Denne navigation ligger *uden* for try/catch, så
+        //    vi ikke “fanger” en NavigationException som formError.
+        //    Hvis du af en eller anden grund stadig får en NavigationException,
+        //    kan du i stedet skrive:
+        //       NavManager.NavigateTo($"/ListingsDetailsPage/{newId}", forceLoad: true);
+        //
+        NavManager.NavigateTo($"/ListingsDetailsPage/{newId}");
     }
 
-    private void Cancel() => NavManager.NavigateTo("/ListingsPage", forceLoad: true);
-    private void Logout() => NavManager.NavigateTo("/login", forceLoad: true);
-
-    /* ------------  Model-klasse ------------ */
-    public class ListingModel
+    private void Cancel()
     {
-        public string Title { get; set; } = string.Empty;
-        public string Brand { get; set; } = string.Empty;
-        public string Model { get; set; } = string.Empty;
-        public string CPU { get; set; } = string.Empty;
-        public string RAM { get; set; } = string.Empty;
-        public string Storage { get; set; } = string.Empty;
-        public string GPU { get; set; } = string.Empty;
-        public string ScreenSize { get; set; } = string.Empty;
-        public string OS { get; set; } = string.Empty;
-        public string Condition { get; set; } = string.Empty;
-        public decimal? Price { get; set; }
-        public string Description { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
-        public bool AcceptTerms { get; set; }
+        NavManager.NavigateTo("/ListingsPage", forceLoad: true);
     }
 }
