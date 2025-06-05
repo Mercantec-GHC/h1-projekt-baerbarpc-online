@@ -1,7 +1,10 @@
 ﻿@page "/CreateListing"
 @inject NavigationManager NavManager
 @inject IListingRepository ListingRepo
+@inject IHttpContextAccessor HttpContextAccessor
 @using Blazor_Markedsplads.Models
+@using Microsoft.AspNetCore.Components.Forms
+
 
 <PageTitle>Opret Annonce</PageTitle>
 
@@ -158,16 +161,28 @@
 </section>
 
 @code {
-    private Listing createModel = new();
+    [SupplyParameterFromForm]
+    private Listing createModel { get; set; } = new();
     private string? formError;
+
+
+    private void Cancel()
+    {
+
+        NavManager.NavigateTo("/");
+    }
 
     private async Task HandleSubmit()
     {
+
         formError = null;
+        Console.WriteLine("[DEBUG] HandleSubmit entered.");
+
 
         if (!createModel.AcceptTerms)
         {
             formError = "Du skal acceptere vilkår og betingelser.";
+            Console.WriteLine("[DEBUG] AcceptTerms not checked.");
             return;
         }
 
@@ -191,18 +206,45 @@
                 Location = createModel.Location?.Trim() ?? string.Empty,
                 CreatedUtc = createModel.CreatedUtc
             };
+        Console.WriteLine("[DEBUG] Listing object created.");
 
         try
         {
+            Console.WriteLine("[DEBUG] Attempting to insert listing into database...");
             int newId = await ListingRepo.InsertAsync(listing);
+            Console.WriteLine($"[SUCCESS] Listing created with ID: {newId}. Attempting to navigate to /ListingPage with forceLoad: true.");
 
-            // Pak navigation i InvokeAsync, så vi er garanteret at køre i "UI-tråden"
-            await InvokeAsync(() => NavManager.NavigateTo("/ListingsPage"));
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                if (!httpContext.Response.HasStarted)
+                {
+                    httpContext.Response.Redirect("/ListingPage");
+                    return;
+                }
+                else
+                {
+                    formError = "Annoncen blev oprettet, men automatisk viderestilling fejlede (Response already started). Naviger venligst manuelt.";
+                    Console.WriteLine("[ERROR] Could not perform HTTP redirect: Response has already started.");
+                }
+            }
+            else
+            {
+                formError = "Annoncen blev oprettet, men automatisk viderestilling fejlede (HttpContext not available). Naviger venligst manuelt."; 
+                Console.WriteLine("[ERROR] Could not perform HTTP redirect: HttpContext is null.");
+
+            }
+
         }
         catch (Exception ex)
         {
-            formError = $"Kunne ikke oprette annonce: {ex.Message}";
+
+            formError = $"Fejl under oprettelse eller navigation: {ex.Message}"; 
+            Console.WriteLine($"[ERROR] CreateListing.HandleSubmit: {ex.ToString()}");
+
         }
+        Console.WriteLine("[DEBUG] HandleSubmit finished.");
+
     }
 
 }

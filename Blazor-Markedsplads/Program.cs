@@ -15,6 +15,7 @@ builder.Services
     .AddInteractiveServerComponents();
 
 // ─── 2. Registrér database‐service + repositories ──────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IListingRepository, ListingRepository>();
 
@@ -33,8 +34,10 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseAntiforgery();
+
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
+
 app.MapBlazorHub();
 
 app.Run();
