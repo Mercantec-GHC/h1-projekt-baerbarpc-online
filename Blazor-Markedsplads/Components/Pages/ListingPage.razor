@@ -58,7 +58,7 @@
                              alt="@($"{p.Brand} {p.Model}")" />
                         <div class="card-body">
                             <h5 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h5>
-                            <p class="card-text small text-muted">@($"{p.Cpu}, {p.Ram} RAM, {p.Storage} GB")</p>
+                            <p class="card-text small text-muted">@($"{p.Cpu}, {p.Ram} GB RAM, {p.Storage} GB")</p>
                             <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
                         </div>
                         <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
@@ -88,6 +88,7 @@
         {
             // Henter de første 100 (eller færre, hvis der ikke findes 100)
             allListings = await ListingRepo.GetPremiumAsync(100);
+            errorMsg = null;
         }
         catch (Exception ex)
         {
@@ -117,7 +118,7 @@
     }
 
     private void NavigateToDetails(int id) =>
-        NavManager.NavigateTo($"/ListingsDetailsPage/{id}");
+        NavManager.NavigateTo($"/ListingDetailsPage/{id}");
 
     private static string FormatPrice(decimal price)
     {

@@ -1,10 +1,8 @@
 ﻿@page "/CreateListing"
 @inject NavigationManager NavManager
 @inject IListingRepository ListingRepo
-@inject IHttpContextAccessor HttpContextAccessor
 @using Blazor_Markedsplads.Models
-@using Microsoft.AspNetCore.Components.Forms
-
+@rendermode InteractiveServer
 
 <PageTitle>Opret Annonce</PageTitle>
 
@@ -33,36 +31,31 @@
                         <div class="col-12">
                             <label for="title" class="form-label fw-semibold">Overskrift</label>
                             <InputText id="title" class="form-control"
-                                       @bind-Value="createModel.Title"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.Title" />
                         </div>
 
                         <!-- Mærke / Model -->
                         <div class="col-md-6">
                             <label for="brand" class="form-label fw-semibold">Mærke</label>
                             <InputText id="brand" class="form-control"
-                                       @bind-Value="createModel.Brand"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.Brand" />
                         </div>
                         <div class="col-md-6">
                             <label for="model" class="form-label fw-semibold">Model</label>
                             <InputText id="model" class="form-control"
-                                       @bind-Value="createModel.Model"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.Model" />
                         </div>
 
                         <!-- CPU / GPU -->
                         <div class="col-md-6">
                             <label for="cpu" class="form-label fw-semibold">CPU</label>
                             <InputText id="cpu" class="form-control"
-                                       @bind-Value="createModel.Cpu"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.Cpu" />
                         </div>
                         <div class="col-md-6">
                             <label for="gpu" class="form-label fw-semibold">GPU</label>
                             <InputText id="gpu" class="form-control"
-                                       @bind-Value="createModel.Gpu"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.Gpu" />
                         </div>
 
                         <!-- RAM / Storage -->
@@ -81,16 +74,14 @@
                         <div class="col-md-4">
                             <label for="screenSize" class="form-label fw-semibold">Skærm (")</label>
                             <InputText id="screenSize" class="form-control"
-                                       @bind-Value="createModel.ScreenSize"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.ScreenSize" />
                         </div>
 
                         <!-- Styresystem / Tilstand -->
                         <div class="col-md-6">
                             <label for="os" class="form-label fw-semibold">Styresystem</label>
                             <InputText id="os" class="form-control"
-                                       @bind-Value="createModel.OS"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.OS" />
                         </div>
                         <div class="col-md-6">
                             <label for="condition" class="form-label fw-semibold">Tilstand</label>
@@ -113,22 +104,19 @@
                         <div class="col-md-6">
                             <label for="phone" class="form-label fw-semibold">Telefon</label>
                             <InputText id="phone" class="form-control"
-                                       @bind-Value="createModel.Phone"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.Phone" />
                         </div>
 
                         <!-- Lokation / Beskrivelse -->
                         <div class="col-md-12">
                             <label for="location" class="form-label fw-semibold">Lokation</label>
                             <InputText id="location" class="form-control"
-                                       @bind-Value="createModel.Location"
-                                       @bind-Value:event="oninput" />
+                                       @bind-Value="createModel.Location" />
                         </div>
                         <div class="col-md-12">
                             <label for="description" class="form-label fw-semibold">Beskrivelse</label>
                             <InputTextArea id="description" class="form-control"
                                            @bind-Value="createModel.Description"
-                                           @bind-Value:event="oninput"
                                            rows="4" />
                         </div>
 
@@ -140,8 +128,6 @@
                             <label for="acceptTerms" class="form-check-label">
                                 Jeg accepterer vilkår &amp; betingelser
                             </label>
-
-                            <p class="small">AcceptTerms (debug): <strong>@createModel.AcceptTerms</strong></p>
                         </div>
                     </div>
 
@@ -161,90 +147,51 @@
 </section>
 
 @code {
-    [SupplyParameterFromForm]
-    private Listing createModel { get; set; } = new();
+    private Listing createModel = new();
     private string? formError;
-
-
-    private void Cancel()
-    {
-
-        NavManager.NavigateTo("/");
-    }
 
     private async Task HandleSubmit()
     {
-
         formError = null;
-        Console.WriteLine("[DEBUG] HandleSubmit entered.");
-
 
         if (!createModel.AcceptTerms)
         {
             formError = "Du skal acceptere vilkår og betingelser.";
-            Console.WriteLine("[DEBUG] AcceptTerms not checked.");
             return;
         }
 
         createModel.CreatedUtc = DateTime.UtcNow;
 
         var listing = new Listing
-            {
-                Brand = createModel.Brand?.Trim() ?? string.Empty,
-                Model = createModel.Model?.Trim() ?? string.Empty,
-                Gpu = createModel.Gpu?.Trim() ?? string.Empty,
-                Cpu = createModel.Cpu?.Trim() ?? string.Empty,
-                Ram = createModel.Ram,
-                Storage = createModel.Storage,
-                OS = createModel.OS?.Trim() ?? string.Empty,
-                Price = createModel.Price,
-                ScreenSize = createModel.ScreenSize?.Trim() ?? string.Empty,
-                Condition = createModel.Condition?.Trim() ?? string.Empty,
-                Title = createModel.Title?.Trim() ?? string.Empty,
-                Description = createModel.Description?.Trim() ?? string.Empty,
-                Phone = createModel.Phone?.Trim() ?? string.Empty,
-                Location = createModel.Location?.Trim() ?? string.Empty,
-                CreatedUtc = createModel.CreatedUtc
-            };
-        Console.WriteLine("[DEBUG] Listing object created.");
+        {
+            Brand = createModel.Brand?.Trim() ?? string.Empty,
+            Model = createModel.Model?.Trim() ?? string.Empty,
+            Gpu = createModel.Gpu?.Trim() ?? string.Empty,
+            Cpu = createModel.Cpu?.Trim() ?? string.Empty,
+            Ram = createModel.Ram,
+            Storage = createModel.Storage,
+            OS = createModel.OS?.Trim() ?? string.Empty,
+            Price = createModel.Price,
+            ScreenSize = createModel.ScreenSize?.Trim() ?? string.Empty,
+            Condition = createModel.Condition?.Trim() ?? string.Empty,
+            Title = createModel.Title?.Trim() ?? string.Empty,
+            Description = createModel.Description?.Trim() ?? string.Empty,
+            Phone = createModel.Phone?.Trim() ?? string.Empty,
+            Location = createModel.Location?.Trim() ?? string.Empty,
+            CreatedUtc = createModel.CreatedUtc
+        };
 
         try
         {
-            Console.WriteLine("[DEBUG] Attempting to insert listing into database...");
             int newId = await ListingRepo.InsertAsync(listing);
-            Console.WriteLine($"[SUCCESS] Listing created with ID: {newId}. Attempting to navigate to /ListingPage with forceLoad: true.");
 
-            var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                if (!httpContext.Response.HasStarted)
-                {
-                    httpContext.Response.Redirect("/ListingPage");
-                    return;
-                }
-                else
-                {
-                    formError = "Annoncen blev oprettet, men automatisk viderestilling fejlede (Response already started). Naviger venligst manuelt.";
-                    Console.WriteLine("[ERROR] Could not perform HTTP redirect: Response has already started.");
-                }
-            }
-            else
-            {
-                formError = "Annoncen blev oprettet, men automatisk viderestilling fejlede (HttpContext not available). Naviger venligst manuelt."; 
-                Console.WriteLine("[ERROR] Could not perform HTTP redirect: HttpContext is null.");
-
-            }
-
+            // Pak navigation i InvokeAsync, så vi er garanteret at køre i "UI-tråden"
+            await InvokeAsync(() => NavManager.NavigateTo("/ListingPage"));
         }
         catch (Exception ex)
         {
-
-            formError = $"Fejl under oprettelse eller navigation: {ex.Message}"; 
-            Console.WriteLine($"[ERROR] CreateListing.HandleSubmit: {ex.ToString()}");
-
+            formError = $"Kunne ikke oprette annonce: {ex.Message}";
         }
-        Console.WriteLine("[DEBUG] HandleSubmit finished.");
-
     }
 
 }

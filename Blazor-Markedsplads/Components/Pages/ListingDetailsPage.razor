@@ -1,29 +1,59 @@
-﻿@page "/ListingDetailsPage"
+﻿@page "/ListingDetailsPage/{Id:int}"
 @inject IListingRepository ListingRepo
 @inject NavigationManager NavManager
 
 <PageTitle>Annonce Detaljer</PageTitle>
 
 <div class="container py-5">
-    <h3>Annonce detaljer</h3>
+    <h3>Annonce Detaljer</h3>
 
     @if (listing == null)
     {
-        <div class="alert alert-warning">Kunne ikke finde annoncen med ID = @Id.</div>
-        <button class="btn btn-secondary mt-3" @onclick="BackToList">Tilbage til oversigten</button>
+        <div class="alert alert-warning">
+            Kunne ikke finde annoncen med ID = @Id.
+        </div>
+        <button class="btn btn-secondary mt-3" @onclick="BackToList">
+            Tilbage til oversigten
+        </button>
     }
     else
     {
-        <div class="card mt-3">
-            <div class="card-body">
-                <h5 class="card-title">@listing.Title</h5>
-                <p class="card-text">
-                    <strong>Mærke:</strong> @listing.Brand<br />
-                    <strong>Model:</strong> @listing.Model<br />
-                    <strong>Pris:</strong> @listing.Price.ToString("N0") kr.<br />
-                    <strong>Beskrivelse:</strong><br />@listing.Description
-                </p>
-                <button class="btn btn-primary" @onclick="BackToList">Tilbage til oversigten</button>
+        <div class="row">
+            <div class="col-md-6">
+                <img src="images/laptop-placeholder.svg"
+                     class="img-fluid rounded shadow-sm"
+                     alt="@($"{listing.Brand} {listing.Model}")" />
+                <!-- Du kan tilføje flere thumbnails her, hvis du har billeder i databasen -->
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="card-title">@listing.Title</h5>
+                        <p class="card-text">
+                            <strong>Mærke:</strong> @listing.Brand<br />
+                            <strong>Model:</strong> @listing.Model<br />
+                            <strong>Pris:</strong> @listing.Price.ToString("N0") kr.<br />
+                            <strong>CPU:</strong> @listing.Cpu<br />
+                            <strong>GPU:</strong> @listing.Gpu<br />
+                            <strong>RAM:</strong> @listing.Ram GB<br />
+                            <strong>Lager:</strong> @listing.Storage GB<br />
+                            <strong>Operativsystem:</strong> @listing.OS<br />
+                            <strong>Skærmstørrelse:</strong> @listing.ScreenSize<br />
+                            <strong>Stand:</strong> @listing.Condition<br />
+                            <strong>Telefon:</strong> @listing.Phone<br />
+                            <strong>Beliggenhed:</strong> @listing.Location<br />
+                            <strong>Oprettet:</strong> @listing.CreatedUtc.ToString("dd/MM/yyyy HH:mm")<br /><br />
+                            <strong>Beskrivelse:</strong><br />
+                            @listing.Description
+                        </p>
+                        <button class="btn btn-primary me-2" @onclick="ContactSeller">
+                            Kontakt Sælger
+                        </button>
+                        <button class="btn btn-secondary" @onclick="BackToList">
+                            Tilbage til oversigten
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -35,8 +65,25 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        listing = await ListingRepo.GetByIdAsync(Id);
+        try
+        {
+            listing = await ListingRepo.GetByIdAsync(Id);
+        }
+        catch
+        {
+            listing = null;
+        }
     }
 
-    private void BackToList() => NavManager.NavigateTo("/ListingsPage");
+    private void BackToList() =>
+        NavManager.NavigateTo("/ListingsPage");
+
+    private void ContactSeller()
+    {
+        if (listing != null)
+        {
+            // Eksempel: Åbn et mailto-link eller vis telefonnummer
+            NavManager.NavigateTo($"mailto:?subject=Interesse i din annonce \"{listing.Title}\"&body=Hej, jeg er interesseret i din annonce med ID {listing.Id}.", true);
+        }
+    }
 }
