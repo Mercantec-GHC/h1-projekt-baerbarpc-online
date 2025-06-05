@@ -7,7 +7,28 @@
 <PageTitle>Opret Annonce</PageTitle>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <!-- … din navbar … -->
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
+            <i class="bi bi-laptop"></i> LaptopMarket
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/ListingPage" ActiveClass="active">Annoncer</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/CreateListing" ActiveClass="active">Opret Annonce</NavLink>
+                </li>
+            </ul>
+        </div>
+    </div>
 </nav>
 
 <section class="py-5" style="background-color:#f8f9fa; min-height:70vh;">
@@ -34,36 +55,73 @@
                                        @bind-Value="createModel.Title" />
                         </div>
 
-                        <!-- Mærke / Model -->
+                        <!-- Mærke -->
                         <div class="col-md-6">
                             <label for="brand" class="form-label fw-semibold">Mærke</label>
-                            <InputText id="brand" class="form-control"
-                                       @bind-Value="createModel.Brand" />
+                            <InputSelect id="brand" class="form-select"
+                                         @bind-Value="createModel.Brand">
+                                <option value="">– vælg –</option>
+                                <option value="Apple">Apple</option>
+                                <option value="Dell">Dell</option>
+                                <option value="HP">HP</option>
+                                <option value="Lenovo">Lenovo</option>
+                                <option value="ASUS">ASUS</option>
+                                <option value="Acer">Acer</option>
+                                <option value="MSI">MSI</option>
+                                <option value="Razer">Razer</option>
+                                <option value="Andet">Andet</option>
+                            </InputSelect>
                         </div>
+
+                        <!-- Model (bliver stadig frit tekstfelt) -->
                         <div class="col-md-6">
                             <label for="model" class="form-label fw-semibold">Model</label>
                             <InputText id="model" class="form-control"
                                        @bind-Value="createModel.Model" />
                         </div>
 
-                        <!-- CPU / GPU -->
+                        <!-- CPU -->
                         <div class="col-md-6">
                             <label for="cpu" class="form-label fw-semibold">CPU</label>
-                            <InputText id="cpu" class="form-control"
-                                       @bind-Value="createModel.Cpu" />
+                            <InputSelect id="cpu" class="form-select"
+                                         @bind-Value="createModel.Cpu">
+                                <option value="">– vælg –</option>
+                                <option value="Intel i3">Intel i3</option>
+                                <option value="Intel i5">Intel i5</option>
+                                <option value="Intel i7">Intel i7</option>
+                                <option value="Intel i9">Intel i9</option>
+                                <option value="AMD Ryzen 3">AMD Ryzen 3</option>
+                                <option value="AMD Ryzen 5">AMD Ryzen 5</option>
+                                <option value="AMD Ryzen 7">AMD Ryzen 7</option>
+                                <option value="AMD Ryzen 9">AMD Ryzen 9</option>
+                                <option value="Apple M1">Apple M1</option>
+                                <option value="Apple M2">Apple M2</option>
+                                <option value="Apple M3">Apple M3</option>
+                                <option value="Andet">Andet</option>
+                            </InputSelect>
                         </div>
+
+                        <!-- GPU (stadig frit tekstfelt) -->
                         <div class="col-md-6">
                             <label for="gpu" class="form-label fw-semibold">GPU</label>
                             <InputText id="gpu" class="form-control"
                                        @bind-Value="createModel.Gpu" />
                         </div>
 
-                        <!-- RAM / Storage -->
+                        <!-- RAM -->
                         <div class="col-md-4">
                             <label for="ram" class="form-label fw-semibold">RAM (GB)</label>
-                            <InputNumber id="ram" class="form-control"
-                                         @bind-Value="createModel.Ram" />
+                            <InputSelect id="ram" class="form-select"
+                                         @bind-Value="createModel.Ram">
+                                <option value="0">– vælg –</option>
+                                <option value="4">4 GB</option>
+                                <option value="8">8 GB</option>
+                                <option value="16">16 GB</option>
+                                <option value="32">32 GB+</option>
+                            </InputSelect>
                         </div>
+
+                        <!-- Storage (stadig InputNumber) -->
                         <div class="col-md-4">
                             <label for="storage" class="form-label fw-semibold">Lager (GB)</label>
                             <InputNumber id="storage" class="form-control"
@@ -73,25 +131,39 @@
                         <!-- Skærmstørrelse -->
                         <div class="col-md-4">
                             <label for="screenSize" class="form-label fw-semibold">Skærm (")</label>
-                            <InputText id="screenSize" class="form-control"
-                                       @bind-Value="createModel.ScreenSize" />
+                            <InputSelect id="screenSize" class="form-select"
+                                         @bind-Value="createModel.ScreenSize">
+                                <option value="">– vælg –</option>
+                                <option value="Under 13&quot;">Under 13”</option>
+                                <option value="13-14&quot;">13-14”</option>
+                                <option value="15-16&quot;">15-16”</option>
+                                <option value="Over 17&quot;">Over 17”</option>
+                            </InputSelect>
                         </div>
 
-                        <!-- Styresystem / Tilstand -->
+                        <!-- Styresystem -->
                         <div class="col-md-6">
                             <label for="os" class="form-label fw-semibold">Styresystem</label>
-                            <InputText id="os" class="form-control"
-                                       @bind-Value="createModel.OS" />
+                            <InputSelect id="os" class="form-select"
+                                         @bind-Value="createModel.OS">
+                                <option value="">– vælg –</option>
+                                <option value="Windows">Windows</option>
+                                <option value="macOS">macOS</option>
+                                <option value="Linux">Linux</option>
+                                <option value="Uden OS">Uden OS</option>
+                            </InputSelect>
                         </div>
+
+                        <!-- Tilstand (stadig dropdown) -->
                         <div class="col-md-6">
                             <label for="condition" class="form-label fw-semibold">Tilstand</label>
                             <InputSelect id="condition" class="form-select"
                                          @bind-Value="createModel.Condition">
                                 <option value="">– vælg –</option>
-                                <option>Næsten ny</option>
-                                <option>Let brugt</option>
-                                <option>Brugt</option>
-                                <option>Slidt</option>
+                                <option value="Næsten ny">Næsten ny</option>
+                                <option value="Let brugt">Let brugt</option>
+                                <option value="Brugt">Brugt</option>
+                                <option value="Slidt">Slidt</option>
                             </InputSelect>
                         </div>
 
@@ -160,6 +232,21 @@
             return;
         }
 
+        // Sørg for, at RAM ikke er 0 (hvis der ikke er valgt noget)
+        if (createModel.Ram == 0)
+        {
+            formError = "Du skal vælge en RAM-størrelse.";
+            return;
+        }
+
+        // Sørg for, at skærmstørrelse er valgt
+        if (string.IsNullOrWhiteSpace(createModel.ScreenSize))
+        {
+            formError = "Du skal vælge en skærmstørrelse.";
+            return;
+        }
+
+        // Opret tidspunkt
         createModel.CreatedUtc = DateTime.UtcNow;
 
         var listing = new Listing
@@ -185,13 +272,12 @@
         {
             int newId = await ListingRepo.InsertAsync(listing);
 
-            // Pak navigation i InvokeAsync, så vi er garanteret at køre i "UI-tråden"
-            await InvokeAsync(() => NavManager.NavigateTo("/ListingPage"));
+            // Navigér tilbage til oversigten (brug den korrekte rute "/ListingsPage")
+            await InvokeAsync(() => NavManager.NavigateTo("/ListingsPage"));
         }
         catch (Exception ex)
         {
             formError = $"Kunne ikke oprette annonce: {ex.Message}";
         }
     }
-
 }

@@ -67,23 +67,24 @@
                 @foreach (var p in premiumListings)
                 {
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <div class="card h-100 shadow-sm border-0">
-                            <img src="images/laptop-placeholder.svg"
-                                 class="card-img-top product-img"
-                                 alt="@($"{p.Brand} {p.Model}")" />
+                        <!-- Hele kortet er indlejret i en NavLink, så det bliver klikbart -->
+                        <NavLink href="@($"/ListingDetailsPage/{p.Id}")" class="text-decoration-none text-body">
+                            <div class="card h-100 shadow-sm border-0 hover-shadow">
+                                <img src="images/laptop-placeholder.svg"
+                                     class="card-img-top product-img"
+                                     alt="@($"{p.Brand} {p.Model}")" />
 
-                            <div class="card-body">
-                                <h5 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h5>
-                                <p class="card-text small text-muted">@($"{p.Cpu}, {p.Ram} RAM, {p.Storage} GB")</p>
-                                <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
-                            </div>
+                                <div class="card-body">
+                                    <h5 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h5>
+                                    <p class="card-text small text-muted">@($"{p.Cpu}, {p.Ram} RAM, {p.Storage} GB")</p>
+                                    <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
+                                </div>
 
-                            <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
-                                <button type="button" class="btn btn-sm btn-light" @onclick="() => NavigateToDetails(p.Id)">
-                                    <i class="bi bi-arrow-right-circle"></i>
-                                </button>
+                                <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
+                                    <i class="bi bi-arrow-right-circle fs-4 text-secondary"></i>
+                                </div>
                             </div>
-                        </div>
+                        </NavLink>
                     </div>
                 }
             </div>
@@ -121,23 +122,21 @@
     }
 
     private void NavigateCreateAd() => NavManager.NavigateTo("/CreateListing");
-    private void NavigateToDetails(int id) => NavManager.NavigateTo($"/ListingsDetailsPage/{id}");
+    private void NavigateToDetails(int id) => NavManager.NavigateTo($"/ListingDetailsPage/{id}");
 
     private void Search()
     {
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            NavManager.NavigateTo($"/ListingsPage?query={Uri.EscapeDataString(searchTerm)}");
+            NavManager.NavigateTo($"/ListingPage?query={Uri.EscapeDataString(searchTerm)}");
         }
     }
 
     private static string FormatPrice(decimal price)
     {
-        // Hvis prisen er 0 (eller man vil håndtere null), kan man tjekke det:
         if (price <= 0)
             return "0 kr";
 
-        // ToString("N0") viser tusindtalsseparator uden decimaler: fx 3.500
         return $"{price.ToString("N0")} kr";
     }
 }
