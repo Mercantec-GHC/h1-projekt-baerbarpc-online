@@ -19,12 +19,14 @@
     else
     {
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-6 mb-4">
+                <!-- Placeholder‐billede (erstat evt. med rigtige billeder, hvis du gemmer url’er i databasen) -->
                 <img src="images/laptop-placeholder.svg"
                      class="img-fluid rounded shadow-sm"
                      alt="@($"{listing.Brand} {listing.Model}")" />
-                <!-- Du kan tilføje flere thumbnails her, hvis du har billeder i databasen -->
+                <!-- Hvis du har flere billeder, kan du tilføje ’thumbnails’ her nedenunder -->
             </div>
+
             <div class="col-md-6">
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
@@ -76,14 +78,16 @@
     }
 
     private void BackToList() =>
-        NavManager.NavigateTo("/ListingsPage");
+        NavManager.NavigateTo("/ListingPage");
 
     private void ContactSeller()
     {
         if (listing != null)
         {
-            // Eksempel: Åbn et mailto-link eller vis telefonnummer
-            NavManager.NavigateTo($"mailto:?subject=Interesse i din annonce \"{listing.Title}\"&body=Hej, jeg er interesseret i din annonce med ID {listing.Id}.", true);
+            // Eksempel: Åbn en mail-klient med et ’mailto:’ link
+            var subject = Uri.EscapeDataString($"Interesse i din annonce \"{listing.Title}\"");
+            var body = Uri.EscapeDataString($"Hej, jeg er interesseret i din annonce med ID {listing.Id}. Mvh.");
+            NavManager.NavigateTo($"mailto:?subject={subject}&body={body}", true);
         }
     }
 }
