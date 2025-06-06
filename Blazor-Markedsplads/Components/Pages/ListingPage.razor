@@ -31,14 +31,22 @@
 </nav>
 
 <div class="container py-5">
-    <h3>Alle Annoncer</h3>
+    @if (!string.IsNullOrWhiteSpace(Query))
+    {
+        <h3>Søgeresultater for "@Query"</h3>
+    }
+    else
+    {
+        <h3>Alle Annoncer</h3>
+    }
 
     <div class="row mb-3">
         <div class="col-md-8">
-            <InputText @bind-Value="filterTerm" placeholder="Søg på brand/model/..." class="form-control" />
+            @* filterTerm er nu bundet til søgefeltet *@
+            <InputText @bind-Value="filterTerm" placeholder="Søg på titel, brand, model..." class="form-control" @onkeyup="HandleSearchInput" />
         </div>
         <div class="col-md-4">
-            <button class="btn btn-primary w-100" @onclick="PerformSearch">Søg</button>
+            <button class="btn btn-primary w-100" @onclick="Search">Søg</button>
         </div>
     </div>
 
@@ -46,7 +54,11 @@
     {
         <div class="alert alert-danger">@errorMsg</div>
     }
-    else if (allListings?.Any() == true)
+    else if (allListings == null)
+    {
+        <p><em>Indlæser annoncer...</em></p>
+    }
+    else if (allListings.Any())
     {
         <div class="row g-4">
             @foreach (var p in allListings)
@@ -57,14 +69,15 @@
 
                             <img src="@(p.Images.Any() ? $"/uploads/listings/{p.Images.First().ImagePath}" : "images/laptop-placeholder.svg")"
                                  class="card-img-top product-img"
-                                 alt="@($"{p.Brand} {p.Model}")" />
+                                 alt="@p.Title" />
 
                             <div class="card-body">
-                                <h5 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h5>
-                                <p class="card-text small text-muted">@($"{p.Cpu}, {p.Ram} GB RAM, {p.Storage} GB")</p>
+                                <h5 class="card-title fw-semibold" style="min-height: 48px;">@p.Title</h5>
+                                <p class="card-text small text-muted">@($"{p.Brand} {p.Model}")</p>
                                 <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
                             </div>
-                            <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
+                            <div class="card-footer bg-white border-0 py-2 d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">@p.Location</span>
                                 <i class="bi bi-arrow-right-circle fs-4 text-secondary"></i>
                             </div>
                         </div>
@@ -75,56 +88,57 @@
     }
     else
     {
-        <p class="text-muted">Ingen annoncer fundet.</p>
+        <p class="text-muted">Ingen annoncer fundet, der matcher din søgning.</p>
     }
 </div>
 
 @code {
-    private List<Listing> allListings = new();
-    private string filterTerm = "";
+    private List<Listing>? allListings;
+    private string filterTerm = ""; // Bruges til input-feltet
     private string? errorMsg;
 
-    protected override async Task OnInitializedAsync()
+    // RETTELSE 1: Vi opretter en property til at modtage søgeordet fra URL'en.
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Query { get; set; }
+
+    // RETTELSE 2: Vi bruger OnParametersSetAsync, som kører HVER GANG URL'en (og dens parametre) ændres.
+    protected override async Task OnParametersSetAsync()
     {
+        // Vi opdaterer søgefeltet med det, der står i URL'en.
+        filterTerm = Query ?? "";
+
         try
         {
-            // Henter de første 100 (eller færre, hvis der ikke findes 100)
-            allListings = await ListingRepo.GetPremiumAsync(100);
+            // Vi bruger Query-parameteren fra URL'en til at hente data.
+            allListings = await ListingRepo.SearchAsync(Query ?? "");
             errorMsg = null;
         }
         catch (Exception ex)
         {
-            errorMsg = $"Fejl ved hentning: {ex.Message}";
+            errorMsg = $"Fejl ved hentning af annoncer: {ex.Message}";
         }
     }
 
-    private async Task PerformSearch()
+    // RETTELSE 3: Når man søger på siden, opdaterer vi nu URL'en, hvilket genindlæser komponenten korrekt.
+    private void Search()
     {
-        if (string.IsNullOrWhiteSpace(filterTerm))
+        NavManager.NavigateTo($"/ListingPage?query={Uri.EscapeDataString(filterTerm)}");
+    }
+
+    private void HandleSearchInput(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
         {
-            // Hvis intet filter er tastet, hent alle igen
-            await OnInitializedAsync();
-        }
-        else
-        {
-            try
-            {
-                allListings = await ListingRepo.SearchAsync(filterTerm);
-                errorMsg = null;
-            }
-            catch (Exception ex)
-            {
-                errorMsg = $"Fejl ved søgning: {ex.Message}";
-            }
+            Search();
         }
     }
 
     private static string FormatPrice(decimal price)
     {
         if (price <= 0)
-            return "0 kr";
+            return "Pris aftales";
 
-        // "N0" formaterer tal med tusindtals-separator uden decimaler, fx "3 500"
         return $"{price.ToString("N0")} kr";
     }
 }

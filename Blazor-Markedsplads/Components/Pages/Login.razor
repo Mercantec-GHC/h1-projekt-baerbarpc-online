@@ -1,38 +1,131 @@
-﻿@page "/UserProfile/{Id:int}"
+﻿@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using BlazorMarkedsplads.Models
+@using BlazorMarkedsplads.Services
 @inject IUserRepository UserRepo
+@inject NavigationManager NavManager
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
-<h3>Brugerprofil</h3>
+<PageTitle>Log ind</PageTitle>
 
-@if (currentUser == null)
-{
-    <p>Indlæser…</p>
-}
-else
-{
-    <p><strong>Navn:</strong> @currentUser.Name</p>
-    <p><strong>Email:</strong> @currentUser.Email</p>
-    <!-- … osv. … -->
-}
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
+            <i class="bi bi-laptop"></i> LaptopMarket
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/ListingPage" ActiveClass="active">Annoncer</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/CreateUser" ActiveClass="active">Opret Konto</NavLink>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<section class="py-5" style="background-color:#f0f0f0; min-height:65vh;">
+    <div class="container d-flex justify-content-center">
+        <div class="card shadow-sm border-0" style="max-width:520px; width:100%;">
+            <div class="card-body p-4 p-md-5">
+                <h4 class="fw-bold">Log ind</h4>
+                <p class="small text-muted mb-4">Indtast dine oplysninger for at tilgå din konto</p>
+
+                @if (!string.IsNullOrWhiteSpace(formError))
+                {
+                    <div class="alert alert-danger">@formError</div>
+                }
+
+                <EditForm Model="loginModel" OnValidSubmit="HandleValidSubmit" FormName="LoginForm">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Email *</label>
+                        <InputText class="form-control"
+                                   type="email"
+                                   @bind-Value="loginModel.Email"
+                                   placeholder="Indtast din email" />
+                        <ValidationMessage For="@(() => loginModel.Email)" class="text-danger small" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Adgangskode *</label>
+                        <InputText class="form-control"
+                                   type="password"
+                                   @bind-Value="loginModel.Password" />
+                        <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-3">
+                        Log ind
+                    </button>
+
+                    <p class="text-center small mb-0">
+                        Har du ikke en konto? <a href="/CreateUser">Opret en her</a>
+                    </p>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</section>
 
 @code {
-    [Parameter] public int Id { get; set; }
-    private User? currentUser;
-    private string? loadError;
+    private LoginModel loginModel = new();
+    private string? formError;
 
-    protected override async Task OnInitializedAsync()
+    private async Task HandleValidSubmit()
     {
+        formError = null; // Reset previous errors
+
         try
         {
-            currentUser = await UserRepo.GetByIdAsync(Id);
-            if (currentUser == null)
+            // 1. Find user by email
+            var user = await UserRepo.GetByEmailAsync(loginModel.Email);
+
+            // 2. Check if user exists and password is correct
+            // IMPORTANT: In a real-world application, ALWAYS hash passwords.
+            // This code compares plain text passwords based on your current project setup.
+            if (user != null && user.Password == loginModel.Password)
             {
-                loadError = "Bruger ikke fundet.";
+                // 3. Store user ID in local storage to simulate a login session
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "uid", user.Id.ToString());
+
+                // 4. Navigate to the user's profile page
+                NavManager.NavigateTo("/UserProfile", forceLoad: true);
+            }
+            else
+            {
+                // User not found or password incorrect
+                formError = "Ugyldig email eller adgangskode.";
             }
         }
         catch (Exception ex)
         {
-            loadError = $"Fejl ved hentning af bruger: {ex.Message}";
+            // Handle potential database or other exceptions
+            formError = $"Der opstod en fejl: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// A nested class to hold the form data for the login page.
+    /// </summary>
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "Email er påkrævet")]
+        [EmailAddress(ErrorMessage = "Indtast venligst en gyldig email-adresse")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Adgangskode er påkrævet")]
+        public string Password { get; set; } = string.Empty;
     }
 }

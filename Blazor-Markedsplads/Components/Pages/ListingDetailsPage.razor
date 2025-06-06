@@ -44,33 +44,64 @@
     else
     {
         <div class="row">
-    <div class="col-md-6 mb-4">
-        @if (listing.Images.Any())
-        {
-            <img src="@($"/uploads/listings/{listing.Images.First().ImagePath}")"
-                 class="img-fluid rounded shadow-sm mb-3"
-                 alt="@($"{listing.Brand} {listing.Model}")" />
+            <div class="col-md-6 mb-4">
+                @if (listing.Images != null && listing.Images.Any())
+                {
+                    <img src="@($"/uploads/listings/{listing.Images.First().ImagePath}")"
+                         class="img-fluid rounded shadow-sm mb-3"
+                         alt="@($"{listing.Brand} {listing.Model}")" />
 
-            <div class="d-flex gap-2">
-            @foreach(var image in listing.Images.Skip(1))
-            {
-                <img src="@($"/uploads/listings/{image.ImagePath}")"
-                     class="img-fluid rounded" style="width: 80px; height: auto;"
-                     alt="Thumbnail" />
-            }
+                    @if (listing.Images.Count > 1)
+                    {
+                        <div class="d-flex gap-2">
+                            @foreach (var image in listing.Images.Skip(1))
+                            {
+                                <img src="@($"/uploads/listings/{image.ImagePath}")"
+                                     class="img-fluid rounded" style="width: 80px; height: auto; cursor: pointer;"
+                                     alt="Thumbnail" />
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <img src="images/laptop-placeholder.svg"
+                         class="img-fluid rounded shadow-sm"
+                         alt="Ingen billede" />
+                }
             </div>
-        }
-        else
-        {
-            <img src="images/laptop-placeholder.svg"
-                 class="img-fluid rounded shadow-sm"
-                 alt="Ingen billede" />
-        }
-    </div>
 
-    <div class="col-md-6">
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="card-title">@listing.Title</h5>
+                        <p class="card-text">
+                            <strong>Mærke:</strong> @listing.Brand<br />
+                            <strong>Model:</strong> @listing.Model<br />
+                            <strong>Pris:</strong> @listing.Price.ToString("N0") kr.<br />
+                            <strong>CPU:</strong> @listing.Cpu<br />
+                            <strong>GPU:</strong> @listing.Gpu<br />
+                            <strong>RAM:</strong> @listing.Ram GB<br />
+                            <strong>Lager:</strong> @listing.Storage GB<br />
+                            <strong>Operativsystem:</strong> @listing.OS<br />
+                            <strong>Skærmstørrelse:</strong> @listing.ScreenSize<br />
+                            <strong>Stand:</strong> @listing.Condition<br />
+                            <strong>Telefon:</strong> @listing.Phone<br />
+                            <strong>Beliggenhed:</strong> @listing.Location<br />
+                            <strong>Oprettet:</strong> @listing.CreatedUtc.ToString("dd/MM/yyyy HH:mm")<br /><br />
+                            <strong>Beskrivelse:</strong><br />
+                            @((MarkupString)listing.Description.Replace(Environment.NewLine, "<br/>"))
+                        </p>
+                        <button class="btn btn-primary me-2" @onclick="ContactSeller">
+                            Kontakt Sælger
+                        </button>
+                        <button class="btn btn-secondary" @onclick="BackToList">
+                            Tilbage til oversigten
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-</div>
     }
 </div>
 
@@ -82,6 +113,7 @@
     {
         try
         {
+            // Sørg for at hente dataen inklusiv billeder
             listing = await ListingRepo.GetByIdAsync(Id);
         }
         catch
@@ -97,10 +129,13 @@
     {
         if (listing != null)
         {
-            // Eksempel: Åbn en mail-klient med et ’mailto:’ link
-            var subject = Uri.EscapeDataString($"Interesse i din annonce \"{listing.Title}\"");
-            var body = Uri.EscapeDataString($"Hej, jeg er interesseret i din annonce med ID {listing.Id}. Mvh.");
-            NavManager.NavigateTo($"mailto:?subject={subject}&body={body}", true);
+            // Forsøger at finde en email i din model, ellers efterlader den tom
+            // Hvis du har en email-property på din User-model, kan du flette den ind her
+            var sellerEmail = ""; // f.eks. listing.User.Email
+
+            var subject = Uri.EscapeDataString($"Interesse i din annonce: \"{listing.Title}\"");
+            var body = Uri.EscapeDataString($"Hej,\n\nJeg er interesseret i din annonce med ID {listing.Id} på LaptopMarket.\n\nMvh.");
+            NavManager.NavigateTo($"mailto:{sellerEmail}?subject={subject}&body={body}", true);
         }
     }
 }
