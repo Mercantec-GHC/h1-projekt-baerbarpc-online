@@ -11,5 +11,7 @@ namespace Blazor_Markedsplads.Services
         Task<List<Listing>> SearchAsync(string term);
         Task<List<Listing>> GetByUserIdAsync(int userId);
         Task<Listing?> GetByIdAsync(int id);
+
+        Task AddImageAsync(int listingId, string imagePath);
     }
 }

@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Collections.Generic;
 namespace Blazor_Markedsplads.Models
 {
     public class Listing
@@ -24,6 +24,9 @@ namespace Blazor_Markedsplads.Models
         public string Phone { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
         public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+
+        // — NYT FELT TIL BILLEDER —
+        public List<ListingImage> Images { get; set; } = new List<ListingImage>();
 
         public bool AcceptTerms { get; set; } = true;
     }

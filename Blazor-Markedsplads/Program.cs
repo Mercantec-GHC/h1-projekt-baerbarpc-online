@@ -1,4 +1,4 @@
-﻿using Blazor_Markedsplads.Components;  
+﻿using Blazor_Markedsplads.Components;
 using Blazor_Markedsplads.Services;
 using BlazorMarkedsplads.Services;
 using Microsoft.AspNetCore.Builder;
@@ -10,18 +10,27 @@ using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 
 
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 1024 * 1024 * 10; // Sæt til 10 MB
+});
+
+// Tilføj Blazor-komponenter som før.
 builder.Services
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// ─── 2. Registrér database‐service + repositories ──────────────────────────────────────────
+
+
+
+// ─── Registrér dine egne services som før ───────────────────────────
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IListingRepository, ListingRepository>();
 
 var app = builder.Build();
 
-// ─── 4. Konfigurer middleware‐pipeline i præcis denne rækkefølge ──────────────────────────────
+// ─── Konfigurer middleware‐pipeline som før ──────────────────────────
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -31,13 +40,10 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-
 app.UseRouting();
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
-
-
 
 app.Run();

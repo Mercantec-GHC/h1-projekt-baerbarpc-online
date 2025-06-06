@@ -70,18 +70,12 @@
                         <!-- Hele kortet er indlejret i en NavLink, så det bliver klikbart -->
                         <NavLink href="@($"/ListingDetailsPage/{p.Id}")" class="text-decoration-none text-body">
                             <div class="card h-100 shadow-sm border-0 hover-shadow">
-                                <img src="images/laptop-placeholder.svg"
+
+                                <img src="@(p.Images.Any() ? $"/uploads/listings/{p.Images.First().ImagePath}" : "images/laptop-placeholder.svg")"
                                      class="card-img-top product-img"
                                      alt="@($"{p.Brand} {p.Model}")" />
 
                                 <div class="card-body">
-                                    <h5 class="card-title fw-semibold">@($"{p.Brand} {p.Model}")</h5>
-                                    <p class="card-text small text-muted">@($"{p.Cpu}, {p.Ram} RAM, {p.Storage} GB")</p>
-                                    <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
-                                </div>
-
-                                <div class="card-footer bg-white border-0 py-2 d-flex justify-content-end">
-                                    <i class="bi bi-arrow-right-circle fs-4 text-secondary"></i>
                                 </div>
                             </div>
                         </NavLink>

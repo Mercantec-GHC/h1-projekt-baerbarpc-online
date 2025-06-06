@@ -1,6 +1,8 @@
 ﻿@page "/CreateListing"
 @inject NavigationManager NavManager
 @inject IListingRepository ListingRepo
+@inject IWebHostEnvironment Environment // NY: Giver adgang til serverens filsystem (wwwroot)
+@using System.IO                   // NY: Nødvendig for at arbejde med filstier
 @using Blazor_Markedsplads.Models
 @rendermode InteractiveServer
 
@@ -43,23 +45,17 @@
                     <div class="alert alert-danger">@formError</div>
                 }
 
-                <EditForm Model="createModel"
-                          OnValidSubmit="HandleSubmit"
-                          FormName="CreateListingForm">
+                <EditForm Model="createModel" OnValidSubmit="HandleSubmit" FormName="CreateListingForm">
                     <DataAnnotationsValidator />
                     <div class="row g-3">
-                        <!-- Overskrift -->
                         <div class="col-12">
                             <label for="title" class="form-label fw-semibold">Overskrift</label>
-                            <InputText id="title" class="form-control"
-                                       @bind-Value="createModel.Title" />
+                            <InputText id="title" class="form-control" @bind-Value="createModel.Title" />
                         </div>
 
-                        <!-- Mærke -->
                         <div class="col-md-6">
                             <label for="brand" class="form-label fw-semibold">Mærke</label>
-                            <InputSelect id="brand" class="form-select"
-                                         @bind-Value="createModel.Brand">
+                            <InputSelect id="brand" class="form-select" @bind-Value="createModel.Brand">
                                 <option value="">– vælg –</option>
                                 <option value="Apple">Apple</option>
                                 <option value="Dell">Dell</option>
@@ -73,18 +69,14 @@
                             </InputSelect>
                         </div>
 
-                        <!-- Model (bliver stadig frit tekstfelt) -->
                         <div class="col-md-6">
                             <label for="model" class="form-label fw-semibold">Model</label>
-                            <InputText id="model" class="form-control"
-                                       @bind-Value="createModel.Model" />
+                            <InputText id="model" class="form-control" @bind-Value="createModel.Model" />
                         </div>
 
-                        <!-- CPU -->
                         <div class="col-md-6">
                             <label for="cpu" class="form-label fw-semibold">CPU</label>
-                            <InputSelect id="cpu" class="form-select"
-                                         @bind-Value="createModel.Cpu">
+                            <InputSelect id="cpu" class="form-select" @bind-Value="createModel.Cpu">
                                 <option value="">– vælg –</option>
                                 <option value="Intel i3">Intel i3</option>
                                 <option value="Intel i5">Intel i5</option>
@@ -101,18 +93,14 @@
                             </InputSelect>
                         </div>
 
-                        <!-- GPU (stadig frit tekstfelt) -->
                         <div class="col-md-6">
                             <label for="gpu" class="form-label fw-semibold">GPU</label>
-                            <InputText id="gpu" class="form-control"
-                                       @bind-Value="createModel.Gpu" />
+                            <InputText id="gpu" class="form-control" @bind-Value="createModel.Gpu" />
                         </div>
 
-                        <!-- RAM -->
                         <div class="col-md-4">
                             <label for="ram" class="form-label fw-semibold">RAM (GB)</label>
-                            <InputSelect id="ram" class="form-select"
-                                         @bind-Value="createModel.Ram">
+                            <InputSelect id="ram" class="form-select" @bind-Value="createModel.Ram">
                                 <option value="0">– vælg –</option>
                                 <option value="4">4 GB</option>
                                 <option value="8">8 GB</option>
@@ -121,18 +109,14 @@
                             </InputSelect>
                         </div>
 
-                        <!-- Storage (stadig InputNumber) -->
                         <div class="col-md-4">
                             <label for="storage" class="form-label fw-semibold">Lager (GB)</label>
-                            <InputNumber id="storage" class="form-control"
-                                         @bind-Value="createModel.Storage" />
+                            <InputNumber id="storage" class="form-control" @bind-Value="createModel.Storage" />
                         </div>
 
-                        <!-- Skærmstørrelse -->
                         <div class="col-md-4">
                             <label for="screenSize" class="form-label fw-semibold">Skærm (")</label>
-                            <InputSelect id="screenSize" class="form-select"
-                                         @bind-Value="createModel.ScreenSize">
+                            <InputSelect id="screenSize" class="form-select" @bind-Value="createModel.ScreenSize">
                                 <option value="">– vælg –</option>
                                 <option value="Under 13&quot;">Under 13”</option>
                                 <option value="13-14&quot;">13-14”</option>
@@ -141,11 +125,9 @@
                             </InputSelect>
                         </div>
 
-                        <!-- Styresystem -->
                         <div class="col-md-6">
                             <label for="os" class="form-label fw-semibold">Styresystem</label>
-                            <InputSelect id="os" class="form-select"
-                                         @bind-Value="createModel.OS">
+                            <InputSelect id="os" class="form-select" @bind-Value="createModel.OS">
                                 <option value="">– vælg –</option>
                                 <option value="Windows">Windows</option>
                                 <option value="macOS">macOS</option>
@@ -154,11 +136,9 @@
                             </InputSelect>
                         </div>
 
-                        <!-- Tilstand (stadig dropdown) -->
                         <div class="col-md-6">
                             <label for="condition" class="form-label fw-semibold">Tilstand</label>
-                            <InputSelect id="condition" class="form-select"
-                                         @bind-Value="createModel.Condition">
+                            <InputSelect id="condition" class="form-select" @bind-Value="createModel.Condition">
                                 <option value="">– vælg –</option>
                                 <option value="Næsten ny">Næsten ny</option>
                                 <option value="Let brugt">Let brugt</option>
@@ -167,43 +147,52 @@
                             </InputSelect>
                         </div>
 
-                        <!-- Pris / Telefon -->
                         <div class="col-md-6">
                             <label for="price" class="form-label fw-semibold">Pris (kr.)</label>
-                            <InputNumber id="price" class="form-control"
-                                         @bind-Value="createModel.Price" />
+                            <InputNumber id="price" class="form-control" @bind-Value="createModel.Price" />
                         </div>
+
                         <div class="col-md-6">
                             <label for="phone" class="form-label fw-semibold">Telefon</label>
-                            <InputText id="phone" class="form-control"
-                                       @bind-Value="createModel.Phone" />
+                            <InputText id="phone" class="form-control" @bind-Value="createModel.Phone" />
                         </div>
 
-                        <!-- Lokation / Beskrivelse -->
                         <div class="col-md-12">
                             <label for="location" class="form-label fw-semibold">Lokation</label>
-                            <InputText id="location" class="form-control"
-                                       @bind-Value="createModel.Location" />
-                        </div>
-                        <div class="col-md-12">
-                            <label for="description" class="form-label fw-semibold">Beskrivelse</label>
-                            <InputTextArea id="description" class="form-control"
-                                           @bind-Value="createModel.Description"
-                                           rows="4" />
+                            <InputText id="location" class="form-control" @bind-Value="createModel.Location" />
                         </div>
 
-                        <!-- Vilkår og betingelser (checkbox) -->
+                        <div class="col-12">
+                            <label for="images" class="form-label fw-semibold">Billeder (op til 5)</label>
+                            <InputFile id="images" class="form-control" OnChange="LoadFiles" multiple />
+                        </div>
+
+                        @if (uploadedFileNames.Any())
+                        {
+                            <div class="col-12 mt-2">
+                                <p class="small text-muted mb-1">Valgte filer:</p>
+                                <ul class="list-group">
+                                    @foreach (var fileName in uploadedFileNames)
+                                    {
+                                        <li class="list-group-item list-group-item-light small py-1 px-2">@fileName</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        <div class="col-md-12">
+                            <label for="description" class="form-label fw-semibold">Beskrivelse</label>
+                            <InputTextArea id="description" class="form-control" @bind-Value="createModel.Description" rows="4" />
+                        </div>
+
                         <div class="col-md-12 form-check mt-2">
-                            <InputCheckbox id="acceptTerms"
-                                           class="form-check-input"
-                                           @bind-Value="createModel.AcceptTerms" />
+                            <InputCheckbox id="acceptTerms" class="form-check-input" @bind-Value="createModel.AcceptTerms" />
                             <label for="acceptTerms" class="form-check-label">
                                 Jeg accepterer vilkår &amp; betingelser
                             </label>
                         </div>
                     </div>
 
-                    <!-- Knapper -->
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary flex-grow-1">
                             Opret annonce
@@ -222,6 +211,43 @@
     private Listing createModel = new();
     private string? formError;
 
+    // NYE LISTER TIL AT HÅNDTERE UPLOADEDE FILER
+    private List<string> uploadedFilePaths = new();
+    private List<string> uploadedFileNames = new();
+
+    private async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        uploadedFileNames.Clear();
+        uploadedFilePaths.Clear();
+        formError = null;
+
+        var uploadPath = Path.Combine(Environment.WebRootPath, "uploads", "listings");
+        Directory.CreateDirectory(uploadPath);
+
+        foreach (var file in e.GetMultipleFiles(5))
+        {
+            try
+            {
+                var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+                var fullPath = Path.Combine(uploadPath, uniqueFileName);
+
+                await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                await using var fs = new FileStream(fullPath, FileMode.Create);
+                await stream.CopyToAsync(fs);
+
+                uploadedFileNames.Add(file.Name);
+                uploadedFilePaths.Add(uniqueFileName);
+            }
+            catch (Exception ex)
+            {
+                formError = $"Fejl under upload af fil '{file.Name}': {ex.Message}";
+                uploadedFileNames.Clear();
+                uploadedFilePaths.Clear();
+                return;
+            }
+        }
+    }
+
     private async Task HandleSubmit()
     {
         formError = null;
@@ -232,21 +258,18 @@
             return;
         }
 
-        // Sørg for, at RAM ikke er 0 (hvis der ikke er valgt noget)
         if (createModel.Ram == 0)
         {
             formError = "Du skal vælge en RAM-størrelse.";
             return;
         }
 
-        // Sørg for, at skærmstørrelse er valgt
         if (string.IsNullOrWhiteSpace(createModel.ScreenSize))
         {
             formError = "Du skal vælge en skærmstørrelse.";
             return;
         }
 
-        // Opret tidspunkt
         createModel.CreatedUtc = DateTime.UtcNow;
 
         var listing = new Listing
@@ -270,10 +293,20 @@
 
         try
         {
+            // Trin 1: Opret annoncen for at få et ID
             int newId = await ListingRepo.InsertAsync(listing);
 
-            // Navigér tilbage til oversigten (brug den korrekte rute "/ListingsPage")
-            await InvokeAsync(() => NavManager.NavigateTo("/ListingsPage"));
+            // Trin 2: Gem billed-referencerne til databasen
+            if (uploadedFilePaths.Any())
+            {
+                foreach (var imagePath in uploadedFilePaths)
+                {
+                    await ListingRepo.AddImageAsync(newId, imagePath);
+                }
+            }
+
+            // Trin 3: Navigér til oversigten
+            await InvokeAsync(() => NavManager.NavigateTo("/ListingPage"));
         }
         catch (Exception ex)
         {

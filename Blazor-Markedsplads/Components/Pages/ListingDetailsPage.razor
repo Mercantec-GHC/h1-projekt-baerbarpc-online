@@ -44,45 +44,33 @@
     else
     {
         <div class="row">
-            <div class="col-md-6 mb-4">
-                <!-- Placeholder‐billede (erstat evt. med rigtige billeder, hvis du gemmer url’er i databasen) -->
-                <img src="images/laptop-placeholder.svg"
-                     class="img-fluid rounded shadow-sm"
-                     alt="@($"{listing.Brand} {listing.Model}")" />
-                <!-- Hvis du har flere billeder, kan du tilføje ’thumbnails’ her nedenunder -->
-            </div>
+    <div class="col-md-6 mb-4">
+        @if (listing.Images.Any())
+        {
+            <img src="@($"/uploads/listings/{listing.Images.First().ImagePath}")"
+                 class="img-fluid rounded shadow-sm mb-3"
+                 alt="@($"{listing.Brand} {listing.Model}")" />
 
-            <div class="col-md-6">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">@listing.Title</h5>
-                        <p class="card-text">
-                            <strong>Mærke:</strong> @listing.Brand<br />
-                            <strong>Model:</strong> @listing.Model<br />
-                            <strong>Pris:</strong> @listing.Price.ToString("N0") kr.<br />
-                            <strong>CPU:</strong> @listing.Cpu<br />
-                            <strong>GPU:</strong> @listing.Gpu<br />
-                            <strong>RAM:</strong> @listing.Ram GB<br />
-                            <strong>Lager:</strong> @listing.Storage GB<br />
-                            <strong>Operativsystem:</strong> @listing.OS<br />
-                            <strong>Skærmstørrelse:</strong> @listing.ScreenSize<br />
-                            <strong>Stand:</strong> @listing.Condition<br />
-                            <strong>Telefon:</strong> @listing.Phone<br />
-                            <strong>Beliggenhed:</strong> @listing.Location<br />
-                            <strong>Oprettet:</strong> @listing.CreatedUtc.ToString("dd/MM/yyyy HH:mm")<br /><br />
-                            <strong>Beskrivelse:</strong><br />
-                            @listing.Description
-                        </p>
-                        <button class="btn btn-primary me-2" @onclick="ContactSeller">
-                            Kontakt Sælger
-                        </button>
-                        <button class="btn btn-secondary" @onclick="BackToList">
-                            Tilbage til oversigten
-                        </button>
-                    </div>
-                </div>
+            <div class="d-flex gap-2">
+            @foreach(var image in listing.Images.Skip(1))
+            {
+                <img src="@($"/uploads/listings/{image.ImagePath}")"
+                     class="img-fluid rounded" style="width: 80px; height: auto;"
+                     alt="Thumbnail" />
+            }
             </div>
+        }
+        else
+        {
+            <img src="images/laptop-placeholder.svg"
+                 class="img-fluid rounded shadow-sm"
+                 alt="Ingen billede" />
+        }
+    </div>
+
+    <div class="col-md-6">
         </div>
+</div>
     }
 </div>
 
