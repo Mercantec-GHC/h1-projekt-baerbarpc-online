@@ -124,5 +124,19 @@ namespace BlazorMarkedsplads.Services
 
             await cmd.ExecuteNonQueryAsync();
         }
+
+        public async Task UpdatePasswordAsync(int userId, string newPassword) // Renamed parameter
+        {
+            const string sql = "UPDATE users SET password = @pwd WHERE id = @uid;";
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+
+            cmd.Parameters.AddWithValue("@pwd", newPassword); // Using the plain text password directly
+            cmd.Parameters.AddWithValue("@uid", userId);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 }

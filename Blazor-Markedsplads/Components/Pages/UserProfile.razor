@@ -116,8 +116,36 @@
                         <div class="card border-0 shadow-sm">
                             <div class="card-body p-4">
                                 <h5 class="fw-bold mb-1">Skift Adgangskode</h5>
-                                <p class="text-muted small mb-4">Her kan du opdatere din adgangskode.</p>
-                                <p><em>Formular til at skifte adgangskode kommer her...</em></p>
+                                <p class="text-muted small mb-4">Indtast og bekræft din nye adgangskode.</p>
+
+                                <EditForm Model="passwordModel" OnValidSubmit="HandlePasswordChange">
+                                    <DataAnnotationsValidator />
+
+                                    @if (!string.IsNullOrEmpty(passwordSuccessMessage))
+                                    {
+                                        <div class="alert alert-success">@passwordSuccessMessage</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(passwordErrorMessage))
+                                    {
+                                        <div class="alert alert-danger">@passwordErrorMessage</div>
+                                    }
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Ny Adgangskode</label>
+                                        <InputText type="password" class="form-control" @bind-Value="passwordModel.NewPassword" />
+                                        <ValidationMessage For="@(() => passwordModel.NewPassword)" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Bekræft Ny Adgangskode</label>
+                                        <InputText type="password" class="form-control" @bind-Value="passwordModel.ConfirmPassword" />
+                                        <ValidationMessage For="@(() => passwordModel.ConfirmPassword)" />
+                                    </div>
+
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary">Gem ny adgangskode</button>
+                                    </div>
+                                </EditForm>
                             </div>
                         </div>
                         break;
@@ -189,6 +217,10 @@
     </div>Add commentMore actions
 </footer> 
 @code {
+
+    private PasswordChangeModel passwordModel = new();
+    private string? passwordSuccessMessage;
+    private string? passwordErrorMessage;
 
     private string activeTab = "personal"; // 'personal' er vores standard-fane
 
@@ -316,5 +348,37 @@
         public string? Address { get; set; }
         public string? City { get; set; }
         public string? Zip { get; set; }
+    }
+
+
+    private class PasswordChangeModel
+    {
+        [Required(ErrorMessage = "Ny adgangskode er påkrævet")]
+        [MinLength(6, ErrorMessage = "Adgangskode skal være mindst 6 tegn")]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Bekræft venligst adgangskoden")]
+        [Compare(nameof(NewPassword), ErrorMessage = "Adgangskoderne matcher ikke")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+
+    private async Task HandlePasswordChange()
+    {
+        passwordSuccessMessage = null;
+        passwordErrorMessage = null;
+
+        try
+        {
+            // Vi fjerner hashing og sender den rene adgangskode direkte
+            await UserRepo.UpdatePasswordAsync(userId, passwordModel.NewPassword);
+
+            passwordSuccessMessage = "Din adgangskode er blevet opdateret!";
+            passwordModel = new(); // Nulstil formularen for sikkerhed
+        }
+        catch (Exception ex)
+        {
+            passwordErrorMessage = $"Fejl: Kunne ikke opdatere adgangskode. {ex.Message}";
+        }
     }
 }
