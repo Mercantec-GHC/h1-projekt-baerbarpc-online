@@ -20,24 +20,24 @@
             <!-- =======  Venstre side-menu  ======= -->
             <aside class="col-md-3 mb-4 mb-md-0">
                 <div class="list-group list-group-flush">
-                    <a href="#personal" class="list-group-item list-group-item-action active" data-bs-toggle="tab">
+                    <a @onclick='() => SetActiveTab("personal")' class="list-group-item list-group-item-action @(activeTab == "personal" ? "active" : "")" style="cursor:pointer;">
                         Personlige Oplysninger
                     </a>
-                    <a href="#password" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                    <a @onclick='() => SetActiveTab("password")' class="list-group-item list-group-item-action @(activeTab == "password" ? "active" : "")" style="cursor:pointer;">
                         Adgangskode
                     </a>
-                    <a href="#notifications" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                    <a @onclick='() => SetActiveTab("notifications")' class="list-group-item list-group-item-action @(activeTab == "notifications" ? "active" : "")" style="cursor:pointer;">
                         Notifikationer
                     </a>
-                    <a href="#payments" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                    <a @onclick='() => SetActiveTab("payments")' class="list-group-item list-group-item-action @(activeTab == "payments" ? "active" : "")" style="cursor:pointer;">
                         Betalingsmetoder
                     </a>
 
                     <small class="text-uppercase text-muted px-3 pt-4">Mine Annoncer</small>
-                    <a href="#active-ads" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                    <a @onclick='() => SetActiveTab("active-ads")' class="list-group-item list-group-item-action @(activeTab == "active-ads" ? "active" : "")" style="cursor:pointer;">
                         Aktive Annoncer
                     </a>
-                    <a href="#saved-ads" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                    <a @onclick='() => SetActiveTab("saved-ads")' class="list-group-item list-group-item-action @(activeTab == "saved-ads" ? "active" : "")" style="cursor:pointer;">
                         Gemte Annoncer
                     </a>
                     <a href="/CreateListing" class="list-group-item list-group-item-action">
@@ -51,73 +51,104 @@
             </aside>
 
             <!-- =======  Højre hoved-panel  ======= -->
-            <div class="col-md-9 tab-content">
+            <div class="col-md-9">
 
-                <!-- ----------  Personlige Oplysninger  ---------- -->
-                <div class="tab-pane fade show active" id="personal">
-                    <div class="card border-0 shadow-sm mb-5">
-                        <div class="card-body p-4">
-                            <h5 class="fw-bold mb-1">Personlige Oplysninger</h5>
-                            <p class="text-muted small mb-4">Opdater dine personlige oplysninger</p>
+                @switch (activeTab)
+                {
+                    case "personal":
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-1">Personlige Oplysninger</h5>
+                                <p class="text-muted small mb-4">Opdater dine personlige oplysninger</p>
 
-                            <EditForm Model="profile" OnValidSubmit="SaveProfile">
-                                <DataAnnotationsValidator />
-                                <ValidationSummary />
+                                <EditForm Model="profile" OnValidSubmit="SaveProfile">
+                                    @* Din eksisterende EditForm for profilen indsættes her *@
+                                    <DataAnnotationsValidator />
+                                    <ValidationSummary />
 
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">Fornavn</label>
-                                        <InputText class="form-control" @bind-Value="profile.FirstName" />
-                                        <ValidationMessage For="() => profile.FirstName" />
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Fornavn</label>
+                                            <InputText class="form-control" @bind-Value="profile.FirstName" />
+                                            <ValidationMessage For="() => profile.FirstName" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Efternavn</label>
+                                            <InputText class="form-control" @bind-Value="profile.LastName" />
+                                            <ValidationMessage For="() => profile.LastName" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Email</label>
+                                            <InputText class="form-control" @bind-Value="profile.Email" />
+                                            <ValidationMessage For="() => profile.Email" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Telefonnummer</label>
+                                            <InputText class="form-control" @bind-Value="profile.Phone" />
+                                            <ValidationMessage For="() => profile.Phone" />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small fw-semibold">Adresse</label>
+                                            <InputText class="form-control" @bind-Value="profile.Address" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">By</label>
+                                            <InputText class="form-control" @bind-Value="profile.City" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Postnummer</label>
+                                            <InputText class="form-control" @bind-Value="profile.Zip" />
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">Efternavn</label>
-                                        <InputText class="form-control" @bind-Value="profile.LastName" />
-                                        <ValidationMessage For="() => profile.LastName" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">Email</label>
-                                        <InputText class="form-control" @bind-Value="profile.Email" />
-                                        <ValidationMessage For="() => profile.Email" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">Telefonnummer</label>
-                                        <InputText class="form-control" @bind-Value="profile.Phone" />
-                                        <ValidationMessage For="() => profile.Phone" />
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label small fw-semibold">Adresse</label>
-                                        <InputText class="form-control" @bind-Value="profile.Address" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">By</label>
-                                        <InputText class="form-control" @bind-Value="profile.City" />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">Postnummer</label>
-                                        <InputText class="form-control" @bind-Value="profile.Zip" />
-                                    </div>
-                                </div>
 
-                                <div class="d-flex justify-content-end gap-2 mt-4">
-                                    <button type="button" class="btn btn-outline-secondary" @onclick="ResetProfile">
-                                        Annuller
-                                    </button>
-                                    <button type="submit" class="btn btn-primary">Gem Ændringer</button>
-                                </div>
-                            </EditForm>
+                                    <div class="d-flex justify-content-end gap-2 mt-4">
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="ResetProfile">
+                                            Annuller
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">Gem Ændringer</button>
+                                    </div>
+                                </EditForm>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                        break;
 
+                    case "password":
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-1">Skift Adgangskode</h5>
+                                <p class="text-muted small mb-4">Her kan du opdatere din adgangskode.</p>
+                                <p><em>Formular til at skifte adgangskode kommer her...</em></p>
+                            </div>
+                        </div>
+                        break;
 
+                    case "notifications":
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-1">Notifikationer</h5>
+                                <p class="text-muted small mb-4">Vælg hvilke notifikationer du vil modtage.</p>
+                                <p><em>Indstillinger for notifikationer kommer her...</em></p>
+                            </div>
+                        </div>
+                        break;
 
+                    case "active-ads":
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-1">Mine Aktive Annoncer</h5>
+                                <p class="text-muted small mb-4">Oversigt over dine nuværende annoncer.</p>
+                                <p><em>Liste over annoncer kommer her...</em></p>
+                            </div>
+                        </div>
+                        break;
 
-                <!-- Andre tab-paneler er tomme placeholders -->
-                <div class="tab-pane fade" id="password"><em>Kommer snart …</em></div>
-                <div class="tab-pane fade" id="notifications"><em>Kommer snart …</em></div>
-                <div class="tab-pane fade" id="payments"><em>Kommer snart …</em></div>
-                <div class="tab-pane fade" id="saved-ads"><em>Kommer snart …</em></div>
+                    // Tilføj flere 'case' for de andre faneblade her...
+
+                    default:
+                        <p>Vælg venligst en kategori fra menuen til venstre.</p>
+                        break;
+                }
+
             </div>
         </div>
     </div>
@@ -158,6 +189,13 @@
     </div>Add commentMore actions
 </footer> 
 @code {
+
+    private string activeTab = "personal"; // 'personal' er vores standard-fane
+
+    private void SetActiveTab(string tabName)
+    {
+        activeTab = tabName;
+    }
 
     [Inject]
     private UserStateService UserState { get; set; } = default!;
