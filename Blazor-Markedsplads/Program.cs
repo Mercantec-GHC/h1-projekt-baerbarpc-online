@@ -27,6 +27,7 @@ builder.Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IListingRepository, ListingRepository>();
+builder.Services.AddScoped<UserStateService>();
 
 var app = builder.Build();
 
@@ -45,5 +46,6 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
+
 
 app.Run();

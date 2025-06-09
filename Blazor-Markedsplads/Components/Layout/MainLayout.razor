@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
     <div class="container">
@@ -12,11 +13,19 @@
 
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+
                 <li class="nav-item"><NavLink class="nav-link" href="/ListingPage" ActiveClass="active">Annoncer</NavLink></li>
                 <li class="nav-item"><NavLink class="nav-link" href="/CreateListing" ActiveClass="active">Opret Annonce</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/CreateUser" ActiveClass="active">Opret Konto</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/Login" ActiveClass="active">Log ind</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/UserProfile" ActiveClass="active">Min Profil DEVVVVV </NavLink></li>
+
+                @if (UserState.IsLoggedIn)
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/UserProfile" ActiveClass="active">Min Profil</NavLink></li>
+                }
+                else
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/CreateUser" ActiveClass="active">Opret Konto</NavLink></li>
+                    <li class="nav-item"><NavLink class="nav-link" href="/Login" ActiveClass="active">Log ind</NavLink></li>
+                }
             </ul>
         </div>
     </div>
@@ -27,3 +36,31 @@
         @Body
     </article>
 </main>
+
+@code {
+    [Inject]
+    private UserStateService UserState { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("[DEBUG] MainLayout.OnInitialized(): Abonnerer på UserState.OnChange.");
+        // Vi peger nu på vores nye metode
+        UserState.OnChange += HandleStateChange;
+    }
+
+    // TRIN 3: Dette er den nye metode
+    private void HandleStateChange()
+    {
+        // Denne besked er altafgørende. Den bekræfter, at MainLayout har modtaget signalet.
+        Console.WriteLine($"[DEBUG] MainLayout.HandleStateChange(): Event modtaget! UserState.IsLoggedIn = {UserState.IsLoggedIn}");
+
+        // Kald StateHasChanged inde i InvokeAsync for at sikre korrekt trådhåndtering
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        // Husk at afmelde vores nye metode
+        UserState.OnChange -= HandleStateChange;
+    }
+}

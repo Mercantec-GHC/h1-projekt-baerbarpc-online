@@ -156,8 +156,13 @@
         <hr class="border-secondary my-4" />
         <p class="text-center small opacity-75 mb-0">&copy; @DateTime.Now.Year LaptopMarket. Alle rettigheder forbeholdes.</p>
     </div>Add commentMore actions
-</footer> <!-- :contentReference[oaicite:1]{index=1} -->
+</footer> 
 @code {
+
+    [Inject]
+    private UserStateService UserState { get; set; } = default!;
+
+
     private string? success;
     private string? formError;
 
@@ -243,9 +248,14 @@
 
     private async Task Logout()
     {
-        // JS-interop til at fjerne lokalStorage, altså heller IKKE i OnInitialized
+        // Fjern bruger-ID fra browserens lager
         await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "uid");
-        NavManager.NavigateTo("/login", forceLoad: true);
+
+        // *** NYT: Fortæl vores state service, at brugeren er logget ud ***
+        UserState.Logout();
+
+        // Naviger til login-siden
+        NavManager.NavigateTo("/login");
     }
 
     private void EditAd(int listingId)

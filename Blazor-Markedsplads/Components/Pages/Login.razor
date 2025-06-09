@@ -55,38 +55,38 @@
 </section>
 
 @code {
+    [Inject]
+    private UserStateService UserState { get; set; } = default!;
+
     private LoginModel loginModel = new();
     private string? formError;
 
     private async Task HandleValidSubmit()
     {
-        formError = null; // Reset previous errors
+        formError = null;
 
         try
         {
-            // 1. Find user by email
             var user = await UserRepo.GetByEmailAsync(loginModel.Email);
 
-            // 2. Check if user exists and password is correct
-            // IMPORTANT: In a real-world application, ALWAYS hash passwords.
-            // This code compares plain text passwords based on your current project setup.
-            if (user != null && user.Password == loginModel.Password)
+            if (user != null && user.Password == loginModel.Password) // HUSK: Dette bør hashes i produktion!
             {
-                // 3. Store user ID in local storage to simulate a login session
+                // Gem bruger-ID i browseren for at "huske" login efter en F5-refresh
                 await JSRuntime.InvokeVoidAsync("localStorage.setItem", "uid", user.Id.ToString());
 
-                // 4. Navigate to the user's profile page
-                NavManager.NavigateTo("/UserProfile", forceLoad: true);
+                // *** NYT: Fortæl vores state service, at brugeren er logget ind ***
+                UserState.Login(user.Id);
+
+                // Naviger til brugerens profilside
+                NavManager.NavigateTo("/UserProfile"); // forceLoad er ikke længere nødvendig her
             }
             else
             {
-                // User not found or password incorrect
                 formError = "Ugyldig email eller adgangskode.";
             }
         }
         catch (Exception ex)
         {
-            // Handle potential database or other exceptions
             formError = $"Der opstod en fejl: {ex.Message}";
         }
     }
