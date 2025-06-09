@@ -1,33 +1,29 @@
 ﻿@inherits LayoutComponentBase
-@inject IJSRuntime JSRuntime
 
-<div class="page">
-    <main>
-        <div class="top-row px-4 d-flex justify-content-end gap-3">
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
+            <i class="bi bi-laptop"></i> LaptopMarket
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-
-            <NavLink class="nav-link" href="/CreateUser" ActiveClass="active">
-                CreateUser  DEV
-            </NavLink>
-
-            <NavLink class="nav-link" href="/Login" ActiveClass="active">
-                Login  DEV
-            </NavLink>
-
-            <NavLink class="nav-link" href="/UserProfile" ActiveClass="active">
-                Profil  DEV
-            </NavLink>
-
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+                <li class="nav-item"><NavLink class="nav-link" href="/ListingPage" ActiveClass="active">Annoncer</NavLink></li>
+                <li class="nav-item"><NavLink class="nav-link" href="/CreateListing" ActiveClass="active">Opret Annonce</NavLink></li>
+                <li class="nav-item"><NavLink class="nav-link" href="/CreateUser" ActiveClass="active">Opret Konto</NavLink></li>
+                <li class="nav-item"><NavLink class="nav-link" href="/Login" ActiveClass="active">Log ind</NavLink></li>
+                <li class="nav-item"><NavLink class="nav-link" href="/UserProfile" ActiveClass="active">Min Profil DEVVVVV </NavLink></li>
+            </ul>
         </div>
+    </div>
+</nav>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
-
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+<main>
+    <article class="container py-4 content">
+        @Body
+    </article>
+</main>

@@ -5,27 +5,7 @@
 
 <PageTitle>LaptopMarket – Forside</PageTitle>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-1" href="/">
-            <i class="bi bi-laptop"></i> LaptopMarket
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
 
-        <div class="collapse navbar-collapse" id="mainNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
-                <li class="nav-item"><NavLink class="nav-link" href="/" ActiveClass="active">Forside</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/ListingPage" ActiveClass="active">Annoncer</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/CreateListing" ActiveClass="active">Opret Annonce</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/CreateUser" ActiveClass="active">Opret Konto</NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/Login" ActiveClass="active">Log ind</NavLink></li>
-            </ul>
-        </div>
-    </div>
-</nav>
 
 <section class="hero-section py-5 bg-light border-bottom">
     <div class="container text-center">
@@ -54,7 +34,7 @@
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 fw-bold mb-0">Premium Annoncer</h2>
-            <a class="text-primary fw-semibold text-decoration-none" href="/ListingsPage">Se Alle &gt;</a>
+            <a class="text-primary fw-semibold text-decoration-none" href="/ListingPage">Se Alle &gt;</a>
         </div>
 
         @if (!string.IsNullOrWhiteSpace(loadError))
