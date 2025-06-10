@@ -49,3 +49,12 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+.product-img {
+    width: 100%; /* Fyld altid hele kortets bredde */
+    height: 200px; /* Sæt en fast, ensartet højde for alle billed-containere */
+    object-fit: contain; /* Skaler billedet, så det dækker hele området. 
+                          Bevarer billedets proportioner og beskærer overskydende kanter. */
+
+    object-position: center; /* Sørg for, at billedet er centreret i rammen. */
+}

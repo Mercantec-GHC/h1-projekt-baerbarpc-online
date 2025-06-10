@@ -43,7 +43,7 @@
                     <NavLink href="@($"/ListingDetailsPage/{p.Id}")" class="text-decoration-none text-body">
                         <div class="card h-100 shadow-sm border-0 hover-shadow">
 
-                            <img src="@(p.Images.Any() ? $"/uploads/listings/{p.Images.First().ImagePath}" : "images/laptop-placeholder.svg")"
+                            <img src="@(p.Images.Any() ? $"/uploads/listings/{p.Images.First().ImagePath}" : "Images/laptop-placeholder.png")"
                                  class="card-img-top product-img"
                                  alt="@p.Title" />
 

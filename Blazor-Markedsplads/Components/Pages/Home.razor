@@ -50,7 +50,7 @@
                         <NavLink href="@($"/ListingDetailsPage/{p.Id}")" class="text-decoration-none text-body">
                             <div class="card h-100 shadow-sm border-0 hover-shadow">
 
-                                <img src="@(p.Images != null && p.Images.Any() ? $"/uploads/listings/{p.Images.First().ImagePath}" : "images/laptop-placeholder.svg")"
+                                <img src="@(p.Images != null && p.Images.Any() ? $"/uploads/listings/{p.Images.First().ImagePath}" : "Images/laptop-placeholder.png")"
                                      class="card-img-top product-img"
                                      alt="@($"{p.Brand} {p.Model}")" />
 
@@ -76,15 +76,6 @@
         }
     </div>
 </section>
-
-<footer class="footer bg-dark text-white pt-5 pb-4">
-    <div class="container">
-        <p class="text-center small opacity-75 mb-0">
-            &copy; @DateTime.Now.Year LaptopMarket. Alle rettigheder forbeholdes.
-        </p>
-    </div>
-</footer>
-
 @code {
     private List<Listing> premiumListings = new();
     private string? loadError;

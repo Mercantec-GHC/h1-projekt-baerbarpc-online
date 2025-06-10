@@ -17,4 +17,10 @@
     <Folder Include="wwwroot\uploads\listings\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="wwwroot\Images\laptop-placeholder.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
