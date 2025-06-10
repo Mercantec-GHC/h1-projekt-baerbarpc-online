@@ -2,6 +2,7 @@
 @using System.ComponentModel.DataAnnotations
 @using System.Globalization
 @using BlazorMarkedsplads.Models
+@using BCrypt.Net;
 @inject NavigationManager NavManager
 @inject IUserRepository UserRepo
 @inject IJSRuntime JSRuntime
@@ -370,8 +371,8 @@
 
         try
         {
-            // Vi fjerner hashing og sender den rene adgangskode direkte
-            await UserRepo.UpdatePasswordAsync(userId, passwordModel.NewPassword);
+            var hashedPassword = BCrypt.HashPassword(passwordModel.NewPassword);
+            await UserRepo.UpdatePasswordAsync(userId, hashedPassword);
 
             passwordSuccessMessage = "Din adgangskode er blevet opdateret!";
             passwordModel = new(); // Nulstil formularen for sikkerhed

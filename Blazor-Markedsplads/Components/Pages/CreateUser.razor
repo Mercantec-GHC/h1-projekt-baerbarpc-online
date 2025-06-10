@@ -5,6 +5,7 @@
 @inject IUserRepository UserRepo
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
+@using BCrypt.Net;
 @rendermode InteractiveServer
 
 <PageTitle>Opret Konto</PageTitle>
@@ -55,7 +56,7 @@
             {
                 Name = register.FullName,
                 Email = register.Email,
-                Password = register.Password,
+                Password = BCrypt.HashPassword(register.Password),
                 Phone = register.Phone ?? string.Empty,
                 Address = register.Address ?? string.Empty,
                 City = register.City ?? string.Empty,

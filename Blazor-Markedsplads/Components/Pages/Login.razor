@@ -2,6 +2,7 @@
 @using System.ComponentModel.DataAnnotations
 @using BlazorMarkedsplads.Models
 @using BlazorMarkedsplads.Services
+@using BCrypt.Net;
 @inject IUserRepository UserRepo
 @inject NavigationManager NavManager
 @inject IJSRuntime JSRuntime
@@ -69,7 +70,7 @@
         {
             var user = await UserRepo.GetByEmailAsync(loginModel.Email);
 
-            if (user != null && user.Password == loginModel.Password) // HUSK: Dette bør hashes i produktion!
+            if (user != null && BCrypt.Verify(loginModel.Password, user.Password))
             {
                 // Gem bruger-ID i browseren for at "huske" login efter en F5-refresh
                 await JSRuntime.InvokeVoidAsync("localStorage.setItem", "uid", user.Id.ToString());
@@ -78,7 +79,7 @@
                 UserState.Login(user.Id);
 
                 // Naviger til brugerens profilside
-                NavManager.NavigateTo("/UserProfile"); // forceLoad er ikke længere nødvendig her
+                NavManager.NavigateTo("/UserProfile"); 
             }
             else
             {
