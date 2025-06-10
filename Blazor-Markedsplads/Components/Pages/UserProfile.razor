@@ -166,7 +166,33 @@
                             <div class="card-body p-4">
                                 <h5 class="fw-bold mb-1">Mine Aktive Annoncer</h5>
                                 <p class="text-muted small mb-4">Oversigt over dine nuværende annoncer.</p>
-                                <p><em>Liste over annoncer kommer her...</em></p>
+
+                                @if (!string.IsNullOrEmpty(listingsError))
+                                {
+                                    <div class="alert alert-danger">@listingsError</div>
+                                }
+                                else if (userListings.Any())
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        @foreach (var ad in userListings)
+                                        {
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <a href="/ListingDetailsPage/@ad.Id" class="fw-semibold">@ad.Title</a>
+                                                    <small class="d-block text-muted">@ad.Brand @ad.Model - @ad.Price.ToString("N0") kr.</small>
+                                                </div>
+                                                <div>
+                                                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditAd(ad.Id)">Rediger</button>
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteAd(ad.Id)">Slet</button>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p>Du har ingen aktive annoncer.</p>
+                                }
                             </div>
                         </div>
                         break;
@@ -219,35 +245,30 @@
 </footer> 
 @code {
 
+
+    // Properties til adgangskode-ændring
     private PasswordChangeModel passwordModel = new();
     private string? passwordSuccessMessage;
     private string? passwordErrorMessage;
 
-    private string activeTab = "personal"; // 'personal' er vores standard-fane
+    // Properties til navigation og state
+    private string activeTab = "personal";
+    [Inject] private UserStateService UserState { get; set; } = default!;
+    private string? success;
+    private string? formError;
+    private bool _hasFetchedFromLocalStorage = false;
+
+    // Properties til brugerprofil
+    private int userId;
+    private ProfileModel profile = new();
+
+    // Properties til brugerens annoncer
+    private List<Listing> userListings = new();
+    private string? listingsError;
 
     private void SetActiveTab(string tabName)
     {
         activeTab = tabName;
-    }
-
-    [Inject]
-    private UserStateService UserState { get; set; } = default!;
-
-
-    private string? success;
-    private string? formError;
-
-    private int userId;
-    private ProfileModel profile = new();
-
-
-    // Vi sætter en flag, så vi kun henter JS én gang i OnAfterRenderAsync
-    private bool _hasFetchedFromLocalStorage = false;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Vi henter IKKE længere localStorage her −
-        // forbered kun data, men vent med JS-interop
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -256,16 +277,13 @@
         {
             _hasFetchedFromLocalStorage = true;
 
-            // 1) Hent userId fra localStorage NU hvor JS er tilgængeligt
             var raw = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "uid");
             if (!int.TryParse(raw, out userId))
             {
-                // Hvis vi ikke har et gyldigt UID, videresend til login
                 NavManager.NavigateTo("/login", forceLoad: true);
                 return;
             }
 
-            // 2) Hent brugerdata til profilen fra databasen
             var u = await UserRepo.GetByIdAsync(userId);
             if (u is null)
             {
@@ -273,7 +291,6 @@
                 return;
             }
 
-            // Split fulde navn i fornavn + efternavn
             var parts = u.Name.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             profile.FirstName = parts.Length > 0 ? parts[0] : "";
             profile.LastName = parts.Length > 1 ? parts[1] : "";
@@ -282,6 +299,16 @@
             profile.Address = u.Address;
             profile.City = u.City;
             profile.Zip = u.ZipCode;
+
+            // Hent brugerens annoncer
+            try
+            {
+                userListings = await ListingRepo.GetByUserIdAsync(userId);
+            }
+            catch (Exception ex)
+            {
+                listingsError = $"Kunne ikke hente dine annoncer: {ex.Message}";
+            }
 
             StateHasChanged();
         }
@@ -292,17 +319,16 @@
         try
         {
             var updated = new User
-                {
-                    Id = userId,
-                    Name = $"{profile.FirstName} {profile.LastName}".Trim(),
-                    Email = profile.Email,
-                    Password = "", // Ændrer ikke password her
-                    Phone = profile.Phone,
-                    Address = profile.Address,
-                    City = profile.City,
-                    ZipCode = profile.Zip
-                };
-
+            {
+                Id = userId,
+                Name = $"{profile.FirstName} {profile.LastName}".Trim(),
+                Email = profile.Email,
+                Password = "",
+                Phone = profile.Phone,
+                Address = profile.Address,
+                City = profile.City,
+                ZipCode = profile.Zip
+            };
             await UserRepo.UpdateAsync(updated);
             success = "Dine oplysninger er gemt.";
         }
@@ -319,27 +345,36 @@
 
     private async Task Logout()
     {
-        // Fjern bruger-ID fra browserens lager
         await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "uid");
-
-        // *** NYT: Fortæl vores state service, at brugeren er logget ud ***
         UserState.Logout();
-
-        // Naviger til login-siden
         NavManager.NavigateTo("/login");
     }
 
+    // --- ANNONCE-FUNKTIONER (KORREKT VERSION) ---
     private void EditAd(int listingId)
     {
         NavManager.NavigateTo($"/CreateListing?editId={listingId}");
     }
 
-    private void DeleteAd(int listingId)
+    private async Task ConfirmDeleteAd(int listingId)
     {
-        Console.WriteLine($"Slet annonce med ID = {listingId}");
-        // … evt. kald DbService.DeleteListingAsync(listingId) …
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Er du sikker på, at du vil slette denne annonce? Handlingen kan ikke fortrydes.");
+        if (confirmed)
+        {
+            try
+            {
+                await ListingRepo.DeleteAsync(listingId);
+                userListings.RemoveAll(ad => ad.Id == listingId);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                listingsError = $"Fejl under sletning: {ex.Message}";
+            }
+        }
     }
 
+    // --- PROFIL & ADGANGSKODE MODELLER OG METODER ---
     private class ProfileModel
     {
         public string FirstName { get; set; } = string.Empty;
@@ -350,7 +385,6 @@
         public string? City { get; set; }
         public string? Zip { get; set; }
     }
-
 
     private class PasswordChangeModel
     {
@@ -363,19 +397,16 @@
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
-
     private async Task HandlePasswordChange()
     {
         passwordSuccessMessage = null;
         passwordErrorMessage = null;
-
         try
         {
             var hashedPassword = BCrypt.HashPassword(passwordModel.NewPassword);
             await UserRepo.UpdatePasswordAsync(userId, hashedPassword);
-
             passwordSuccessMessage = "Din adgangskode er blevet opdateret!";
-            passwordModel = new(); // Nulstil formularen for sikkerhed
+            passwordModel = new();
         }
         catch (Exception ex)
         {

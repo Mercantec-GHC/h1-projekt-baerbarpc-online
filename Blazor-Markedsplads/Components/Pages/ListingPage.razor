@@ -47,11 +47,20 @@
                                  class="card-img-top product-img"
                                  alt="@p.Title" />
 
+
                             <div class="card-body">
                                 <h5 class="card-title fw-semibold" style="min-height: 48px;">@p.Title</h5>
                                 <p class="card-text small text-muted">@($"{p.Brand} {p.Model}")</p>
+
+                                @if (p.Seller != null && !string.IsNullOrEmpty(p.Seller.Name))
+                                {
+                                    <p class="card-text small text-muted">Sælger: <span class="fw-semibold text-dark">@p.Seller.Name</span></p>
+                                }
+
                                 <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
                             </div>
+
+
                             <div class="card-footer bg-white border-0 py-2 d-flex justify-content-between align-items-center">
                                 <span class="small text-muted">@p.Location</span>
                                 <i class="bi bi-arrow-right-circle fs-4 text-secondary"></i>

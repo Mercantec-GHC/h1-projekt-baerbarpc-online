@@ -6,6 +6,13 @@ namespace BlazorMarkedsplads.Models
     {
         public int Id { get; set; }
 
+
+        // — BRUGERFELTER — forsøg.
+
+        public int? UserId { get; set; } // Foreign key til User. Skal være nullable for at matche ON DELETE SET NULL.
+        public User? Seller { get; set; } // Til at holde sælgerens info, når vi henter den.
+
+
         // — PRODUKTFELTER —
         public string Brand { get; set; } = string.Empty;
         public string Model { get; set; } = string.Empty;

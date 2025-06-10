@@ -55,6 +55,15 @@
                         <p class="card-text">
                             <strong>Mærke:</strong> @listing.Brand<br />
                             <strong>Model:</strong> @listing.Model<br />
+
+                            @if (listing.Seller != null && !string.IsNullOrEmpty(listing.Seller.Name))
+                            {
+                                <strong>Sælger:</strong> 
+                                @listing.Seller.Name
+                        
+                                <br />
+                            }
+
                             <strong>Pris:</strong> @listing.Price.ToString("N0") kr.<br />
                             <strong>CPU:</strong> @listing.Cpu<br />
                             <strong>GPU:</strong> @listing.Gpu<br />
@@ -105,12 +114,10 @@
     {
         if (listing != null)
         {
-            // Forsøger at finde en email i din model, ellers efterlader den tom
-            // Hvis du har en email-property på din User-model, kan du flette den ind her
-            var sellerEmail = ""; // f.eks. listing.User.Email
-
+            // HER ER FORBEDRINGEN!
+            var sellerEmail = listing.Seller?.Email ?? ""; // Brug den hentede email
             var subject = Uri.EscapeDataString($"Interesse i din annonce: \"{listing.Title}\"");
-            var body = Uri.EscapeDataString($"Hej,\n\nJeg er interesseret i din annonce med ID {listing.Id} på LaptopMarket.\n\nMvh.");
+            var body = Uri.EscapeDataString($"Hej {listing.Seller?.Name},\n\nJeg er interesseret i din annonce med ID {listing.Id} på LaptopMarket.\n\nMvh.");
             NavManager.NavigateTo($"mailto:{sellerEmail}?subject={subject}&body={body}", true);
         }
     }

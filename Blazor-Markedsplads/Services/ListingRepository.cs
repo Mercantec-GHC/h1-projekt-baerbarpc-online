@@ -28,14 +28,14 @@ namespace BlazorMarkedsplads.Services
         public async Task<int> InsertAsync(Listing listing)
         {
             const string sql = @"
-                INSERT INTO listings
-                    (brand, model, gpu, cpu, ram, storage, os, price, screen_size, condition,
-                     title, description, phone, location, created_utc)
-                VALUES
-                    (@brand, @model, @gpu, @cpu, @ram, @storage, @os, @price, @screen_size, @condition,
-                     @title, @description, @phone, @location, @created)
-                RETURNING id;
-            ";
+            INSERT INTO listings
+             (brand, model, gpu, cpu, ram, storage, os, price, screen_size, condition,
+             title, description, phone, location, created_utc, user_id) -- <--- TILFØJ user_id
+             VALUES
+             (@brand, @model, @gpu, @cpu, @ram, @storage, @os, @price, @screen_size, @condition,
+             @title, @description, @phone, @location, @created, @user_id) -- <--- TILFØJ @user_id
+             RETURNING id;
+             ";
 
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
@@ -56,6 +56,8 @@ namespace BlazorMarkedsplads.Services
             cmd.Parameters.AddWithValue("@phone", listing.Phone);
             cmd.Parameters.AddWithValue("@location", listing.Location);
             cmd.Parameters.AddWithValue("@created", listing.CreatedUtc);
+
+            cmd.Parameters.AddWithValue("@user_id", listing.UserId.HasValue ? (object)listing.UserId.Value : DBNull.Value);
 
             var idObj = await cmd.ExecuteScalarAsync();
             return Convert.ToInt32(idObj);
@@ -139,14 +141,18 @@ namespace BlazorMarkedsplads.Services
             // Basis SQL-forespørgsel der forbinder 'listings' med 'listing_images'.
             // LEFT JOIN sikrer, at vi også får annoncer, der endnu ikke har billeder.
             const string baseSql = @"
-                SELECT
-                    l.id, l.brand, l.model, l.gpu, l.cpu, l.ram, l.storage, l.os, l.price, 
-                    l.screen_size, l.condition, l.title, l.description, l.phone, l.location, l.created_utc,
-                    li.id as image_id, 
-                    li.image_path
-                FROM listings l
-                LEFT JOIN listing_images li ON l.id = li.listing_id
-            ";
+              SELECT
+              l.id, l.brand, l.model, l.gpu, l.cpu, l.ram, l.storage, l.os, l.price, 
+              l.screen_size, l.condition, l.title, l.description, l.phone, l.location, l.created_utc,
+              l.user_id, -- Hent brugerens ID
+              u.name as seller_name, -- Hent brugerens navn (med alias)
+              u.email as seller_email, -- Hent brugerens email (med alias)
+              li.id as image_id, 
+              li.image_path
+              FROM listings l
+              LEFT JOIN listing_images li ON l.id = li.listing_id
+              LEFT JOIN users u ON l.user_id = u.id -- <--- TILFØJ DETTE JOIN
+              ";
 
             var finalSql = baseSql + sqlQueryPart; // Sæt basis og den specifikke del sammen.
 
@@ -167,7 +173,8 @@ namespace BlazorMarkedsplads.Services
                 // Tjek om vi allerede har set denne annonce. Hvis ikke, opret den.
                 if (!listingsDictionary.TryGetValue(listingId, out var listing))
                 {
-                    listing = MapReaderToListing(reader); // Brug helper-metode til at oprette objektet
+                    // OPDATER MAPPING LOGIKKEN
+                    listing = MapReaderToListing(reader); // Kald opdateret helper
                     listingsDictionary.Add(listingId, listing);
                 }
 
@@ -208,7 +215,95 @@ namespace BlazorMarkedsplads.Services
                 Phone = reader.GetString(reader.GetOrdinal("phone")),
                 Location = reader.GetString(reader.GetOrdinal("location")),
                 CreatedUtc = reader.GetDateTime(reader.GetOrdinal("created_utc")),
+
+                UserId = reader.IsDBNull(reader.GetOrdinal("user_id")) ? null : reader.GetInt32(reader.GetOrdinal("user_id"))
             };
+        }
+
+
+        public async Task UpdateAsync(Listing listing)
+        {
+            const string sql = @"
+        UPDATE listings SET
+            brand = @brand,
+            model = @model,
+            gpu = @gpu,
+            cpu = @cpu,
+            ram = @ram,
+            storage = @storage,
+            os = @os,
+            price = @price,
+            screen_size = @screen_size,
+            condition = @condition,
+            title = @title,
+            description = @description,
+            phone = @phone,
+            location = @location
+        WHERE id = @id;
+    ";
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+
+            cmd.Parameters.AddWithValue("@brand", listing.Brand);
+            cmd.Parameters.AddWithValue("@model", listing.Model);
+            cmd.Parameters.AddWithValue("@gpu", listing.Gpu);
+            cmd.Parameters.AddWithValue("@cpu", listing.Cpu);
+            cmd.Parameters.AddWithValue("@ram", listing.Ram);
+            cmd.Parameters.AddWithValue("@storage", listing.Storage);
+            cmd.Parameters.AddWithValue("@os", listing.OS);
+            cmd.Parameters.AddWithValue("@price", listing.Price);
+            cmd.Parameters.AddWithValue("@screen_size", listing.ScreenSize);
+            cmd.Parameters.AddWithValue("@condition", listing.Condition);
+            cmd.Parameters.AddWithValue("@title", listing.Title);
+            cmd.Parameters.AddWithValue("@description", listing.Description);
+            cmd.Parameters.AddWithValue("@phone", listing.Phone);
+            cmd.Parameters.AddWithValue("@location", listing.Location);
+            cmd.Parameters.AddWithValue("@id", listing.Id); // Vigtigt at specificere hvilken annonce
+
+            await cmd.ExecuteNonQueryAsync();
+
+
+        }
+
+
+
+        public async Task DeleteAsync(int listingId)
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            // Start en transaktion, så begge operationer enten lykkes eller fejler samlet
+            await using var transaction = await conn.BeginTransactionAsync();
+
+            try
+            {
+                // Trin 1: Slet referencer i listing_images
+                var deleteImagesSql = "DELETE FROM listing_images WHERE listing_id = @id";
+                await using (var cmd = new NpgsqlCommand(deleteImagesSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", listingId);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Trin 2: Slet selve annoncen
+                var deleteListingSql = "DELETE FROM listings WHERE id = @id";
+                await using (var cmd = new NpgsqlCommand(deleteListingSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", listingId);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Hvis alt gik godt, gem ændringerne
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                // Hvis noget fejler, rul tilbage
+                await transaction.RollbackAsync();
+                throw; // Kast fejlen videre
+            }
         }
     }
 }

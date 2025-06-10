@@ -1,7 +1,8 @@
 ﻿@page "/CreateListing"
 @inject NavigationManager NavManager
 @inject IListingRepository ListingRepo
-@inject IWebHostEnvironment Environment // NY: Giver adgang til serverens filsystem (wwwroot)
+@inject IWebHostEnvironment Environment
+@inject UserStateService UserState
 @using System.IO                   
 @using BlazorMarkedsplads.Models
 @rendermode InteractiveServer
@@ -181,12 +182,23 @@
 </section>
 
 @code {
+
+    // NY PARAMETER til at modtage ID fra URL'en
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? EditId { get; set; }
     private Listing createModel = new();
     private string? formError;
+
+
+    private string pageTitle = "Opret Annonce";
+    private string submitButtonText = "Opret annonce";
 
     // NYE LISTER TIL AT HÅNDTERE UPLOADEDE FILER
     private List<string> uploadedFilePaths = new();
     private List<string> uploadedFileNames = new();
+
+
 
     private async Task LoadFiles(InputFileChangeEventArgs e)
     {
@@ -221,6 +233,41 @@
         }
     }
 
+    // TILFØJ EN SIKKERHEDSTJEK
+    protected override void OnInitialized()
+    {
+        if (!UserState.IsLoggedIn)
+        {
+            NavManager.NavigateTo("/login"); // Send brugeren til login, hvis de ikke er logget ind
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EditId.HasValue) // Er vi i rediger-tilstand?
+        {
+            pageTitle = "Rediger Annonce";
+            submitButtonText = "Gem Ændringer";
+
+            var existingListing = await ListingRepo.GetByIdAsync(EditId.Value);
+            if (existingListing != null)
+            {
+                createModel = existingListing; // Udfyld formularen med eksisterende data
+            }
+            else
+            {
+                formError = "Annoncen du prøver at redigere blev ikke fundet.";
+                EditId = null; // Gå tilbage til opret-tilstand
+            }
+        }
+        else // Opret-tilstand
+        {
+            pageTitle = "Opret Annonce";
+            submitButtonText = "Opret annonce";
+            createModel = new Listing(); // Nulstil modellen
+        }
+    }
+
     private async Task HandleSubmit()
     {
         formError = null;
@@ -243,10 +290,20 @@
             return;
         }
 
+        if (!UserState.UserId.HasValue)
+        {
+            formError = "Fejl: Kunne ikke identificere bruger. Prøv at logge ind igen.";
+            return;
+        }
+
+
+
+        createModel.UserId = UserState.UserId.Value; // <-- VIGTIGT!
         createModel.CreatedUtc = DateTime.UtcNow;
 
         var listing = new Listing
         {
+            UserId = createModel.UserId,
             Brand = createModel.Brand?.Trim() ?? string.Empty,
             Model = createModel.Model?.Trim() ?? string.Empty,
             Gpu = createModel.Gpu?.Trim() ?? string.Empty,
@@ -266,24 +323,26 @@
 
         try
         {
-            // Trin 1: Opret annoncen for at få et ID
-            int newId = await ListingRepo.InsertAsync(listing);
-
-            // Trin 2: Gem billed-referencerne til databasen
-            if (uploadedFilePaths.Any())
+            if (EditId.HasValue) // Gemmer vi en eksisterende annonce?
             {
-                foreach (var imagePath in uploadedFilePaths)
-                {
-                    await ListingRepo.AddImageAsync(newId, imagePath);
-                }
+                createModel.Id = EditId.Value; // Sørg for at ID er sat
+                await ListingRepo.UpdateAsync(createModel);
+                NavManager.NavigateTo($"/ListingDetailsPage/{createModel.Id}"); // Gå til den redigerede annonce
             }
+            else // Opretter vi en ny?
+            {
+                if (!UserState.UserId.HasValue) { /* ... fejlhåndtering ... */ return; }
+                createModel.UserId = UserState.UserId.Value;
+                createModel.CreatedUtc = DateTime.UtcNow;
 
-            // Trin 3: Navigér til oversigten
-            await InvokeAsync(() => NavManager.NavigateTo("/ListingPage"));
+                int newId = await ListingRepo.InsertAsync(createModel);
+                // ... håndter billeder som før ...
+                NavManager.NavigateTo("/ListingPage");
+            }
         }
         catch (Exception ex)
         {
-            formError = $"Kunne ikke oprette annonce: {ex.Message}";
+            formError = $"Der opstod en fejl: {ex.Message}";
         }
     }
 }
