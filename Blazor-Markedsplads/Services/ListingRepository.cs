@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq; // Nødvendig for .FirstOrDefault() og .ToList()
+using System.Linq; 
 using System.Threading.Tasks;
-using Blazor_Markedsplads.Models; // Sørg for at begge dine modeller er tilgængelige
+using BlazorMarkedsplads.Models; // Sørg for at begge dine modeller er tilgængelige
 using Microsoft.Extensions.Configuration;
 using Npgsql; // Database-driver
 
-namespace Blazor_Markedsplads.Services
+namespace BlazorMarkedsplads.Services
 {
     /// <summary>
     /// Repository til at håndtere al dataadgang for annoncer (listings) og deres billeder.

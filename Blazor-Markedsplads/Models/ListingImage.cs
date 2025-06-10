@@ -1,4 +1,4 @@
-﻿namespace Blazor_Markedsplads.Models // Sørg for at bruge det korrekte namespace
+﻿namespace BlazorMarkedsplads.Models 
 {
     public class ListingImage
     {

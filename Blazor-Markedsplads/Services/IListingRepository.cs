@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Blazor_Markedsplads.Models;
+using BlazorMarkedsplads.Models;
 
-namespace Blazor_Markedsplads.Services
+namespace BlazorMarkedsplads.Services
 {
     public interface IListingRepository
     {

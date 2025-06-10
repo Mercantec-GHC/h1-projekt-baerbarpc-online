@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-namespace Blazor_Markedsplads.Models
+namespace BlazorMarkedsplads.Models
 {
     public class Listing
     {

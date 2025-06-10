@@ -1,6 +1,6 @@
 ﻿using Blazor_Markedsplads.Components;
-using Blazor_Markedsplads.Services;
 using BlazorMarkedsplads.Services;
+using BlazorMarkedsplads.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
