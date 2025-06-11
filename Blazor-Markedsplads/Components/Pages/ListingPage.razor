@@ -74,60 +74,99 @@
 </div>
 
 @code {
-    // -- Parameters --
+    // ------------------- PARAMETERS -------------------
+    // En parameter er data, som komponenten modtager udefra.
+
+    // [Parameter] og [SupplyParameterFromQuery] arbejder sammen for at hente værdien af 'query'
+    // fra URL'en (f.eks. /ListingPage?query=Dell).
+    // Værdien tildeles automatisk til 'Query'-property'en.
     [Parameter]
     [SupplyParameterFromQuery]
-    public string? Query { get; set; } // Modtager søgeord fra URL (?query=...)
+    public string? Query { get; set; }
 
-    // -- Page State --
+    // ------------------- PAGE STATE -------------------
+    // Komponentens interne hukommelse.
+
+    // Holder listen af annoncer, der skal vises. Kan være 'null' før data er hentet.
     private List<Listing>? allListings;
-    private string filterTerm = ""; // Bundet til søgefeltets input
+
+    // Er bundet til søgefeltet i UI'et og holder den tekst, brugeren skriver.
+    private string filterTerm = "";
+
+    // Holder en eventuel fejlbesked, der skal vises til brugeren.
     private string? errorMsg;
 
-    // -- Lifecycle Methods --
+    // ------------------- LIFECYCLE METHODS -------------------
+    // Metoder, som Blazor kalder automatisk.
+
+    /// <summary>
+    /// Kører, HVER GANG en parameter (som 'Query') bliver sat eller ændret.
+    /// Dette er nøglen til at lave en dynamisk side, der reagerer på ændringer i URL'en.
+    /// </summary>
     protected override async Task OnParametersSetAsync()
     {
-        // Denne metode er nøglen til en dynamisk side. Den kører HVER GANG
-        // en parameter (som 'Query' fra URL'en) ændres.
-
-        filterTerm = Query ?? ""; // Opdater søgefeltet, så det matcher URL'en.
+        // Opdater søgefeltet i UI'et, så det afspejler det, der står i URL'en.
+        // Hvis URL'en ikke har en query, bliver feltet tomt.
+        filterTerm = Query ?? "";
 
         try
         {
-            // Hent data baseret på det nuværende Query. Hvis Query er tomt,
-            // henter SearchAsync (ideelt set) alle annoncer.
+            // Nulstil listen for at vise loading-beskeden, mens nye data hentes.
+            allListings = null;
+
+            // Kald repository'ets søgemetode med værdien fra URL'en.
+            // Repository'et er designet til at returnere alle annoncer, hvis søgeordet er tomt.
             allListings = await ListingRepo.SearchAsync(Query ?? "");
-            errorMsg = null; // Nulstil fejlbesked ved succesfuld hentning.
+
+            // Nulstil eventuelle tidligere fejlbeskeder.
+            errorMsg = null;
         }
         catch (Exception ex)
         {
+            // Hvis databasekaldet fejler, gemmes en fejlbesked til visning i UI'et.
             errorMsg = $"Fejl ved hentning af annoncer: {ex.Message}";
-            Console.WriteLine(ex);
+            Console.WriteLine(ex); // Log den fulde fejl til konsollen for udvikleren.
         }
     }
 
-    // -- Event Handlers --
+    // ------------------- EVENT HANDLERS -------------------
+    // Metoder, der kører som reaktion på brugerhandlinger.
+
+    /// <summary>
+    /// Udfører en søgning ved at navigere til en ny URL.
+    /// </summary>
     private void Search()
     {
-        // I stedet for at genindlæse data direkte, navigerer vi til en ny URL.
-        // Denne navigation får Blazor til at køre OnParametersSetAsync igen,
-        // hvilket sikrer, at sidens tilstand er synkroniseret med URL'en.
+        // Denne metode opdaterer ikke data direkte. I stedet opdaterer den URL'en.
+        // Blazor registrerer ændringen i URL'en og kalder automatisk OnParametersSetAsync,
+        // som så er ansvarlig for at hente de nye data.
+        // Dette er et centralt og meget robust mønster i Blazor.
         NavManager.NavigateTo($"/ListingPage?query={Uri.EscapeDataString(filterTerm)}");
     }
 
+    /// <summary>
+    /// Kaldes, når brugeren taster i søgefeltet. Starter en søgning på "Enter".
+    /// </summary>
     private void HandleSearchInput(KeyboardEventArgs e)
     {
-        // Giver brugeren mulighed for at søge ved at trykke Enter.
+        // Hvis den tast, der blev sluppet, var "Enter"-tasten...
         if (e.Key == "Enter")
         {
+            // ...så kalder vi den samme metode, som søgeknappen bruger.
             Search();
         }
     }
 
-    // -- Helper Methods --
+    // ------------------- HELPER METHODS -------------------
+    // Private metoder, der udfører små, specifikke opgaver.
+
+    /// <summary>
+    /// Formaterer prisen til en pænere tekst-streng.
+    /// </summary>
     private static string FormatPrice(decimal price)
     {
-        // Formaterer prisen for en konsistent visning.
+        // Bruger en "ternary operator" (en kort if-else) til at formatere prisen.
+        // :N0 formaterer med tusindtalsseparator og uden decimaler.
         return price > 0 ? $"{price:N0} kr." : "Pris aftales";
     }
 }

@@ -1,6 +1,6 @@
 ﻿@page "/ListingDetailsPage/{Id:int}"
-@inject IListingRepository ListingRepo
-@inject NavigationManager NavManager
+@inject NavigationManager NavManager      // Til at styre navigation mellem sider.
+@inject IListingRepository ListingRepo    // Til at kommunikere med databasen om 'Listings'. Defineret i Services/IListingRepository.cs.
 @rendermode InteractiveServer
 
 <PageTitle>Annonce Detaljer</PageTitle>
@@ -92,23 +92,41 @@
 </div>
 
 @code {
-    // -- Parameters --
+    // ------------------- PARAMETERS -------------------
+    // En parameter er data, som komponenten modtager udefra.
+
+    // [Parameter] attributten fortæller Blazor, at denne property skal udfyldes
+    // med værdien fra URL'en (fra {Id:int} i @page-direktivet).
     [Parameter]
     public int Id { get; set; }
 
-    // -- Page State --
+    // ------------------- PAGE STATE -------------------
+    // Komponentens interne hukommelse.
+
+    // Holder det 'Listing'-objekt, vi henter fra databasen.
+    // '?' angiver, at den kan være 'null', f.eks. før data er hentet.
     private Listing? listing;
+
+    // En streng til at vise en statusbesked, mens data hentes, eller hvis der opstår en fejl.
     private string loadingMessage = "Indlæser annonce...";
 
-    // -- Lifecycle Methods --
+    // ------------------- LIFECYCLE METHODS -------------------
+    // Metoder, som Blazor kalder automatisk.
+
+    /// <summary>
+    /// Kører, HVER GANG en parameter (som 'Id') bliver sat.
+    /// Dette er det ideelle sted at hente data, der afhænger af en URL-parameter.
+    /// </summary>
     protected override async Task OnParametersSetAsync()
     {
         try
         {
-            // Henter den specifikke annonce baseret på ID'et fra URL'en.
-            // Inkluderer sælger- og billedinformation via repository'ets JOINs.
+            // 'await' pauser metoden, indtil det asynkrone databasekald er færdigt.
+            // Kalder GetByIdAsync i vores repository for at hente annoncen med det specifikke ID.
+            // Dette kald er designet (i ListingRepository.cs) til også at hente billeder og sælgerinfo.
             listing = await ListingRepo.GetByIdAsync(Id);
 
+            // Hvis der ikke blev returneret en annonce (dvs. den er null), opdaterer vi fejlbeskeden.
             if (listing == null)
             {
                 loadingMessage = $"Kunne ikke finde annoncen med ID = {Id}.";
@@ -116,26 +134,40 @@
         }
         catch (Exception ex)
         {
+            // Hvis der sker en uventet fejl under databasekaldet.
             loadingMessage = $"Der skete en fejl under indlæsning: {ex.Message}";
             Console.WriteLine($"Fejl ved hentning af annonce {Id}: {ex}");
         }
     }
 
-    // -- Event Handlers --
+    // ------------------- EVENT HANDLERS -------------------
+    // Metoder, der kører som reaktion på brugerhandlinger.
+
+    /// <summary>
+    /// Navigerer brugeren tilbage til annonceoversigten.
+    /// </summary>
     private void BackToList()
     {
+        // Bruger NavigationManager til at sende brugeren til URL'en for 'ListingPage.razor'.
         NavManager.NavigateTo("/ListingPage");
     }
 
+    /// <summary>
+    /// Åbner brugerens standard email-program med forudfyldte oplysninger.
+    /// </summary>
     private void ContactSeller()
     {
+        // Tjekker, at vi har en annonce OG at den har en tilknyttet sælger.
         if (listing?.Seller != null)
         {
-            // Opretter et 'mailto:' link for at åbne brugerens standard email-program.
+            // Sammensætter et 'mailto:'-link.
             var sellerEmail = listing.Seller.Email;
+            // Uri.EscapeDataString sikrer, at tegn som mellemrum og æøå bliver korrekt kodet i URL'en.
             var subject = Uri.EscapeDataString($"Interesse i din annonce: \"{listing.Title}\"");
             var body = Uri.EscapeDataString($"Hej {listing.Seller.Name},\n\nJeg er interesseret i din annonce med ID {listing.Id} på LaptopMarket.\n\nMvh.");
 
+            // Navigerer til mailto-linket. forceLoad:true er vigtigt her,
+            // da det er en ekstern protokol og ikke en intern Blazor-navigation.
             NavManager.NavigateTo($"mailto:{sellerEmail}?subject={subject}&body={body}", forceLoad: true);
         }
     }

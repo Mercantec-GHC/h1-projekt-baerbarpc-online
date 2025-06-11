@@ -70,61 +70,94 @@
 </section>
 
 @code {
-    // -- Page State & Models --
+    // ------------------- PAGE STATE & MODELS -------------------
+    // Holder styr på sidens nuværende tilstand og de datamodeller, der bruges i formularerne.
+
+    // En boolean til at styre visningen af en "loading..."-besked, mens de indledende data hentes.
     private bool isLoading = true;
-    private string activeTab = "personal"; // Startfaneblad
+
+    // Holder navnet på det aktive faneblad (f.eks. "personal", "password"). Starter på "personal".
+    private string activeTab = "personal";
+
+    // Holder det fulde User-objekt for den bruger, der er logget ind. Kan være 'null' før data er hentet.
     private User? currentUser;
 
-    // Modeller for de forskellige faneblades formularer
-    private ProfileModel profile = new();
-    private PasswordChangeModel passwordModel = new();
+    // Datamodeller, der er bundet til de forskellige formularer på siden.
+    private ProfileModel profile = new();          // Til opdatering af personlige oplysninger.
+    private PasswordChangeModel passwordModel = new(); // Til ændring af adgangskode.
+
+    // En liste til at holde alle den aktuelle brugers annoncer.
     private List<Listing> userListings = new();
 
-    // Feedback-beskeder til brugeren
+    // Strenge til at vise succes- eller fejlbeskeder til brugeren i de forskellige sektioner.
     private string? profileSuccessMessage;
     private string? profileErrorMessage;
     private string? passwordSuccessMessage;
     private string? passwordErrorMessage;
     private string? listingsError;
 
-    // -- Lifecycle Methods --
+    // ------------------- LIFECYCLE METHODS -------------------
+    // Metoder, som Blazor kalder automatisk på bestemte tidspunkter.
+
+    /// <summary>
+    /// Kører, efter komponenten er blevet renderet i browseren. Perfekt til at kalde JavaScript
+    /// og hente data, der er afhængig af browser-interaktion som f.eks. localStorage.
+    /// </summary>
+    /// <param name="firstRender">Er true den allerførste gang, komponenten vises.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Denne logik kører kun én gang, når komponenten er blevet vist i browseren.
+        // Vi ønsker kun at hente al data én gang, når siden indlæses første gang.
         if (firstRender)
         {
+            // Kald vores centrale initialiserings-metode.
             await InitializePageAsync();
-            isLoading = false; // Stop loading-indikatoren
-            StateHasChanged(); // Opdater UI
+
+            // Når alt er hentet, sætter vi isLoading til false for at fjerne loading-beskeden.
+            isLoading = false;
+
+            // Fortæl Blazor, at sidens state er ændret, så UI'et opdateres.
+            StateHasChanged();
         }
     }
 
-    // -- Initialization Logic --
+    // ------------------- INITIALIZATION LOGIC -------------------
+    // Metoder, der er ansvarlige for at forberede og indlæse sidens data.
+
+    /// <summary>
+    /// Orkestrerer hele processen med at indlæse brugerdata og annoncer.
+    /// </summary>
     private async Task InitializePageAsync()
     {
+        // Kald JavaScript for at hente brugerens ID (uid), som blev gemt i localStorage ved login.
         var uidString = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "uid");
+
+        // Forsøg at konvertere strengen fra localStorage til et heltal.
         if (int.TryParse(uidString, out var userId))
         {
+            // Hvis det lykkes, hent den fulde brugerprofil fra databasen.
             currentUser = await UserRepo.GetByIdAsync(userId);
             if (currentUser != null)
             {
-                // Bruger fundet, indlæs data til formularer og lister
+                // Hvis brugeren findes, udfyld formularen med brugerens data og hent brugerens annoncer.
                 PopulateProfileModel(currentUser);
                 await LoadUserListingsAsync(currentUser.Id);
             }
             else
             {
-                // Bruger-ID findes, men ingen bruger i DB. Log ud.
+                // Hvis der er et ID, men ingen bruger i databasen (en "zombie-session"), så log brugeren ud.
                 await LogoutAsync();
             }
         }
         else
         {
-            // Intet bruger-ID fundet. Send til login.
+            // Hvis der slet intet bruger-ID er i localStorage, sendes brugeren til login-siden.
             NavManager.NavigateTo("/login");
         }
     }
 
+    /// <summary>
+    /// Henter alle annoncer for en given bruger fra databasen.
+    /// </summary>
     private async Task LoadUserListingsAsync(int userId)
     {
         try
@@ -137,24 +170,41 @@
         }
     }
 
-    // -- Tab Navigation --
+    // ------------------- TAB NAVIGATION & LOGOUT -------------------
+    // Metoder til at styre brugerfladen og den generelle session.
+
+    /// <summary>
+    /// Skifter det aktive faneblad, som vises i højre panel.
+    /// </summary>
     private void SetActiveTab(string tabName)
     {
         activeTab = tabName;
-        // Nulstil fejlbeskeder når man skifter faneblad for en renere oplevelse
+        // Nulstil alle feedback-beskeder for en ren brugeroplevelse, når der skiftes fane.
         profileSuccessMessage = profileErrorMessage = passwordSuccessMessage = passwordErrorMessage = null;
     }
 
+    /// <summary>
+    /// Logger brugeren ud af systemet.
+    /// </summary>
     private async Task LogoutAsync()
     {
+        // Fjern bruger-ID'et fra browserens localStorage.
         await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "uid");
+        // Opdater den centrale UserStateService for at signalere logout til resten af appen.
         UserState.Logout();
+        // Send brugeren til login-siden.
         NavManager.NavigateTo("/login");
     }
 
-    // -- Profile Information Logic --
+    // ------------------- PROFILE INFORMATION LOGIC -------------------
+    // Metoder, der hører til "Personlige Oplysninger"-fanebladet.
+
+    /// <summary>
+    /// Udfylder 'profile'-modellen med data fra det hentede 'User'-objekt.
+    /// </summary>
     private void PopulateProfileModel(User user)
     {
+        // Deler navnet op i fornavn og efternavn.
         var nameParts = user.Name.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         profile = new ProfileModel
         {
@@ -168,25 +218,30 @@
         };
     }
 
+    /// <summary>
+    /// Gemmer de opdaterede profiloplysninger i databasen.
+    /// </summary>
     private async Task SaveProfileAsync()
     {
+        // Sikkerhedstjek for at sikre, at vi har en bruger at opdatere.
         if (currentUser == null) return;
 
+        // Nulstil feedback-beskeder.
         profileSuccessMessage = profileErrorMessage = null;
         try
         {
-            // Vi opdaterer direkte på det 'currentUser'-objekt, vi allerede har.
-            // Dette er den korrekte fremgangsmåde for en 'class'.
+            // Opdater properties på det 'currentUser'-objekt, vi allerede har i hukommelsen.
             currentUser.Name = $"{profile.FirstName} {profile.LastName}".Trim();
-            currentUser.Email = profile.Email; // Overvej om brugeren skal have lov til at ændre sin email.
+            currentUser.Email = profile.Email;
             currentUser.Phone = profile.Phone ?? "";
             currentUser.Address = profile.Address ?? "";
             currentUser.City = profile.City ?? "";
             currentUser.ZipCode = profile.Zip ?? "";
 
-            // Send det opdaterede objekt til repository'et.
+            // Send det nu opdaterede objekt til repository'et, som gemmer det i databasen.
             await UserRepo.UpdateAsync(currentUser);
 
+            // Vis en succesbesked til brugeren.
             profileSuccessMessage = "Dine oplysninger er gemt.";
         }
         catch (Exception ex)
@@ -195,7 +250,12 @@
         }
     }
 
-    // -- Password Change Logic --
+    // ------------------- PASSWORD CHANGE LOGIC -------------------
+    // Metoder, der hører til "Adgangskode"-fanebladet.
+
+    /// <summary>
+    /// Håndterer ændring af brugerens adgangskode.
+    /// </summary>
     private async Task HandlePasswordChangeAsync()
     {
         if (currentUser == null) return;
@@ -203,11 +263,14 @@
         passwordSuccessMessage = passwordErrorMessage = null;
         try
         {
+            // VIGTIGT: Hash den nye adgangskode, før den sendes til databasen.
             var hashedPassword = BCrypt.HashPassword(passwordModel.NewPassword);
+
+            // Kald repository'et for at opdatere adgangskoden for den specifikke bruger.
             await UserRepo.UpdatePasswordAsync(currentUser.Id, hashedPassword);
 
             passwordSuccessMessage = "Din adgangskode er blevet opdateret!";
-            passwordModel = new(); // Nulstil formularen
+            passwordModel = new(); // Nulstil formularen for at rydde felterne.
         }
         catch (Exception ex)
         {
@@ -215,21 +278,36 @@
         }
     }
 
-    // -- User Listings Logic --
+    // ------------------- USER LISTINGS LOGIC -------------------
+    // Metoder, der hører til "Mine Annoncer"-fanebladet.
+
+    /// <summary>
+    /// Navigerer brugeren til redigeringssiden for en specifik annonce.
+    /// </summary>
     private void EditAd(int listingId)
     {
+        // Sender brugeren til CreateListing-siden og tilføjer annonce-ID'et som en query parameter.
+        // CreateListing.razor vil så genkende dette og gå i "rediger"-tilstand.
         NavManager.NavigateTo($"/CreateListing?editId={listingId}");
     }
 
+    /// <summary>
+    /// Håndterer sletning af en annonce efter bekræftelse fra brugeren.
+    /// </summary>
     private async Task ConfirmDeleteAdAsync(int listingId)
     {
+        // Brug JavaScript til at vise en standard bekræftelsesdialog i browseren.
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Er du sikker på, at du vil slette denne annonce? Handlingen kan ikke fortrydes.");
+
+        // Fortsæt kun, hvis brugeren klikkede "OK".
         if (confirmed)
         {
             try
             {
+                // Kald repository'et for at slette annoncen fra databasen.
                 await ListingRepo.DeleteAsync(listingId);
-                userListings.RemoveAll(ad => ad.Id == listingId); // Opdater UI med det samme
+                // Fjern annoncen fra listen i UI'et med det samme for en hurtig respons.
+                userListings.RemoveAll(ad => ad.Id == listingId);
             }
             catch (Exception ex)
             {
@@ -238,7 +316,9 @@
         }
     }
 
-    // -- Page-Specific Model Classes --
+    // ------------------- PAGE-SPECIFIC MODEL CLASSES -------------------
+    // Private, indlejrede klasser, der kun bruges af denne side til at definere formularmodeller.
+
     private class ProfileModel
     {
         [Required]

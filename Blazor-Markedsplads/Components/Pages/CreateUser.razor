@@ -2,10 +2,10 @@
 @using BlazorMarkedsplads.Models
 @using Microsoft.AspNetCore.Components.Forms
 @using System.ComponentModel.DataAnnotations
-@inject IUserRepository UserRepo
-@inject NavigationManager NavManager
-@inject IJSRuntime JS
-@using BCrypt.Net;
+@inject IUserRepository UserRepo               // Indlæser 'UserRepository', som håndterer al kommunikation med 'users'-tabellen i databasen.
+@inject NavigationManager NavManager           // Giver mulighed for at navigere brugeren til andre sider via C# kode.
+@inject IJSRuntime JS                          // Giver en bro til at kalde JavaScript-funktioner fra C# (f.eks. til at bruge 'localStorage')
+@using BCrypt.Net;                             
 @rendermode InteractiveServer
 
 <PageTitle>Opret Konto</PageTitle>
@@ -25,9 +25,6 @@
                 <EditForm Model="registerModel" OnValidSubmit="HandleRegistrationAsync" FormName="CreateUserForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary class="text-danger" />
-
-                    @* --- Din <EditForm> HTML-del forbliver uændret her --- *@
-                    @* --- Udeladt for læsbarhed, da den er identisk. --- *@
 
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Fulde navn *</label>
@@ -113,89 +110,148 @@
 </section>
 
 @code {
-    // -- Form Model & State --
+    // ------------------- FORM MODEL & STATE -------------------
+    // State-variable er komponentens interne data.
+
+    // [SupplyParameterFromForm] er en attribut, der hjælper med at binde data, når formularer postes direkte.
+    // I en ren InteractiveServer-app er dens rolle mindre, men den skader ikke.
+    // 'registerModel' er et objekt, der holder alle de data, brugeren indtaster i formularen.
     [SupplyParameterFromForm]
     private RegisterModel registerModel { get; set; } = new();
+
+    // En streng til at vise overordnede fejlbeskeder (f.eks. "Adgangskoder matcher ikke").
     private string formError = string.Empty;
 
-    // -- Post-Action State --
+    // ------------------- POST-ACTION STATE -------------------
+    // Disse variable styrer, hvad der skal ske, EFTER brugeren er oprettet i databasen.
+
+    // Et 'flag', vi sætter til true, lige når brugeren er oprettet.
     private bool userJustCreated = false;
+
+    // Her gemmer vi midlertidigt den nye brugers ID.
     private int createdUserId;
 
-    // -- Event Handlers --
+    // ------------------- EVENT HANDLERS -------------------
+    // Metoder, der kører som reaktion på brugerhandlinger.
+
+    /// <summary>
+    /// Denne metode kører, når brugeren trykker på "Opret Konto", og DANN-valideringerne er bestået.
+    /// Den orkestrerer hele registreringsprocessen.
+    /// </summary>
     private async Task HandleRegistrationAsync()
     {
+        // Nulstil fejlbeskeder for at fjerne gamle fejl fra UI'et.
         formError = string.Empty;
 
+        // Kør vores egne, manuelle valideringstjek.
         if (IsFormValid())
         {
             try
             {
+                // Kald helper-metoden, der rent faktisk opretter brugeren i databasen.
                 await CreateUserInDatabaseAsync();
 
-                // Sæt flag, så OnAfterRenderAsync kan håndtere login og navigation.
+                // Sæt flaget til true. Dette signalerer til 'OnAfterRenderAsync',
+                // at den skal udføre login- og navigationslogikken.
                 userJustCreated = true;
+
+                // Fortæl Blazor, at komponentens state er ændret, så den ved, den skal gen- rendere.
                 StateHasChanged();
             }
             catch (Exception ex)
             {
-                // Håndter specifikt dublet-email fejl eller andre DB fejl.
+                // Her fanger vi fejl fra databasen. Den mest almindelige vil være, hvis en email allerede er i brug.
+                // Vi tjekker, om fejlbeskeden indeholder navnet på vores unikke database-constraint ('users_email_key').
                 formError = ex.Message.Contains("duplicate key value violates unique constraint \"users_email_key\"")
-                    ? "En bruger med denne email findes allerede."
-                    : $"Kunne ikke oprette bruger: {ex.Message}";
+                    ? "En bruger med denne email findes allerede." // Brugervenlig besked.
+                    : $"Kunne ikke oprette bruger: {ex.Message}"; // Generisk besked for andre fejl.
             }
         }
     }
 
-    // -- Lifecycle Methods --
+    // ------------------- LIFECYCLE METHODS -------------------
+    // Metoder, som Blazor kalder automatisk.
+
+    /// <summary>
+    /// Kører, EFTER komponenten er blevet renderet i browseren.
+    /// Perfekt til at kalde JavaScript eller til at navigere, efter en handling er udført.
+    /// </summary>
+    /// <param name="firstRender">Er true første gang komponenten vises, ellers false.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Vi tjekker kun 'userJustCreated'-flaget. Vi er ligeglade med, om det er første render.
         if (userJustCreated)
         {
-            // Nulstil flaget for at undgå at koden kører igen.
+            // Nulstil flaget, så denne logik ikke kører igen ved næste re-rendering.
             userJustCreated = false;
 
-            // Gem brugerens ID i browseren for at "logge ind" med det samme.
+            // Brug JavaScript Interop (JS) til at gemme det nye bruger-ID i browserens 'localStorage'.
+            // Dette "logger" brugeren ind med det samme.
             await JS.InvokeVoidAsync("localStorage.setItem", "uid", createdUserId.ToString());
 
             // Naviger brugeren til deres nye profilside.
-            NavManager.NavigateTo("/UserProfile", forceLoad: true); // forceLoad sikrer, at hele app'en genindlæses med den nye login-status.
+            // forceLoad: true sikrer, at hele applikationen genindlæses. Dette er vigtigt,
+            // så MainLayout kan reagere på den nye login-status og vise de korrekte menupunkter.
+            NavManager.NavigateTo("/UserProfile", forceLoad: true);
         }
     }
 
-    // -- Helper Methods --
+    // ------------------- HELPER METHODS -------------------
+    // Private metoder, der udfører specifikke, afgrænsede opgaver.
+
+    /// <summary>
+    /// Udfører manuelle valideringstjek.
+    /// </summary>
+    /// <returns>True hvis gyldig, ellers false.</returns>
     private bool IsFormValid()
     {
+        // Tjekker om de to password-felter er identiske.
         if (registerModel.Password != registerModel.ConfirmPassword)
         {
             formError = "Adgangskoderne matcher ikke.";
             return false;
         }
+        // Tjekker om "Acceptér vilkår"-checkboxen er markeret.
         if (!registerModel.AcceptTerms)
         {
             formError = "Du skal acceptere vilkår og betingelser.";
             return false;
         }
+        // Hvis ingen af tjekkene fejlede, er formularen gyldig.
         return true;
     }
 
+    /// <summary>
+    /// Mapper data fra registerModel til et User-objekt og gemmer det i databasen.
+    /// </summary>
     private async Task CreateUserInDatabaseAsync()
     {
+        // Opret et nyt User-objekt, klar til at blive sendt til databasen.
         var newUser = new User
         {
             Name = registerModel.FullName,
             Email = registerModel.Email,
-            Password = BCrypt.HashPassword(registerModel.Password), // Vigtigt: Hash adgangskoden!
+            // VIGTIGT: Kalder BCrypt.HashPassword for at hashe (kryptere) adgangskoden,
+            // så den aldrig gemmes i klartekst i databasen.
+            Password = BCrypt.HashPassword(registerModel.Password),
             Phone = registerModel.Phone ?? string.Empty,
             Address = registerModel.Address ?? string.Empty,
             City = registerModel.City ?? string.Empty,
             ZipCode = registerModel.PostalCode ?? string.Empty
         };
 
+        // Kald repository-metoden, som håndterer SQL-kaldet.
+        // Gem det returnerede ID i 'createdUserId', så vi kan bruge det senere.
         createdUserId = await UserRepo.InsertAsync(newUser);
     }
 
-    // -- Page-Specific Model Class --
+    // ------------------- PAGE-SPECIFIC MODEL CLASS -------------------
+    // En privat, indlejret klasse, der kun bruges af denne side til at definere formularens model og valideringsregler.
+
+    /// <summary>
+    /// Holder data og valideringsregler for registreringsformularen.
+    /// DataAnnotations som [Required] og [EmailAddress] bruges af Blazors 'DataAnnotationsValidator'.
+    /// </summary>
     private class RegisterModel
     {
         [Required(ErrorMessage = "Fulde navn er påkrævet")]
@@ -210,6 +266,7 @@
         public string Password { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Bekræft adgangskode er påkrævet")]
+        // Sammenligner dette felt med 'Password'-feltet for at sikre, at de er ens.
         [Compare(nameof(Password), ErrorMessage = "Adgangskoderne matcher ikke")]
         public string ConfirmPassword { get; set; } = string.Empty;
 
@@ -218,6 +275,7 @@
         public string? City { get; set; }
         public string? PostalCode { get; set; }
 
+        // Sikrer, at checkboxen skal være 'true' for at være gyldig.
         [Range(typeof(bool), "true", "true", ErrorMessage = "Du skal acceptere vilkår og betingelser")]
         public bool AcceptTerms { get; set; }
     }

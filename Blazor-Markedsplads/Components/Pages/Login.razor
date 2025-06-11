@@ -57,55 +57,85 @@
 </section>
 
 @code {
-    // -- Form Model & State --
+    // ------------------- FORM MODEL & STATE -------------------
+    // State-variable er komponentens interne data.
+
+    // Et objekt, der holder de data, brugeren indtaster i login-formularen.
     private LoginModel loginModel = new();
+
+    // En streng til at vise overordnede fejlbeskeder, f.eks. "Ugyldig email eller adgangskode".
     private string? formError;
 
-    // -- Event Handlers --
+    // ------------------- EVENT HANDLERS -------------------
+    // Metoder, der kører som reaktion på brugerhandlinger.
+
+    /// <summary>
+    /// Kører, når brugeren trykker "Log ind", og de basale valideringsregler (fra LoginModel) er opfyldt.
+    /// </summary>
     private async Task HandleValidSubmit()
     {
-        formError = null; // Nulstil fejlbeskeder ved hvert forsøg.
+        // Nulstil fejlbeskeder ved hvert nyt login-forsøg.
+        formError = null;
 
         try
         {
-            // Trin 1: Find brugeren baseret på email.
+            // Trin 1: Hent brugeren fra databasen via repository'et baseret på den indtastede email.
             var user = await UserRepo.GetByEmailAsync(loginModel.Email);
 
-            // Trin 2: Verificer, at brugeren findes OG at passwordet er korrekt.
+            // Trin 2: Verificer, at brugeren findes (user != null) OG at det indtastede password
+            // matcher det hashede password fra databasen. BCrypt.Verify tager sig af denne sammenligning.
             if (user != null && BCrypt.Verify(loginModel.Password, user.Password))
             {
-                // Trin 3: Udfør selve login-handlingen.
+                // Trin 3: Hvis begge dele er korrekte, kaldes helper-metoden til at udføre selve login-handlingen.
                 await LogUserInAsync(user);
             }
             else
             {
+                // Hvis brugeren ikke findes, eller passwordet er forkert, vises en generel fejlbesked.
+                // Vi specificerer ikke, hvad der er forkert, af sikkerhedsmæssige årsager.
                 formError = "Ugyldig email eller adgangskode.";
             }
         }
         catch (Exception ex)
         {
+            // Hvis der sker en uventet fejl (f.eks. database er nede), vises en systemfejl.
             formError = $"Der opstod en systemfejl: {ex.Message}";
-            Console.WriteLine($"Login-fejl: {ex}");
+            Console.WriteLine($"Login-fejl: {ex}"); // Log den fulde fejl til konsollen til debugging.
         }
     }
 
-    // -- Helper Methods --
+    // ------------------- HELPER METHODS -------------------
+    // Private metoder, der udfører specifikke, afgrænsede opgaver.
+
+    /// <summary>
+    /// Udfører de tre centrale skridt i at logge en bruger ind i applikationen.
+    /// </summary>
+    /// <param name="user">Det fulde User-objekt for den bruger, der skal logges ind.</param>
     private async Task LogUserInAsync(User user)
     {
-        // Gem bruger-ID i browserens `localStorage` for at huske login på tværs af sessions/refreshes.
+        // 1. Gem brugerens ID i browserens `localStorage` via JavaScript Interop.
+        // Dette sikrer, at brugeren forbliver logget ind, selvom de lukker fanen eller genindlæser siden.
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "uid", user.Id.ToString());
 
-        // Opdater den delte `UserStateService`, så UI-elementer (som MainLayout)
-        // øjeblikkeligt reagerer på, at brugeren er logget ind.
+        // 2. Opdater den centrale, delte `UserStateService`.
+        // Dette er signalet til resten af applikationen (f.eks. MainLayout) om, at en bruger
+        // nu er logget ind, så UI'et kan opdatere sig med det samme (f.eks. vise "Min Profil"-knappen).
         UserState.Login(user.Id);
 
-        // Naviger brugeren til deres personlige profilside.
+        // 3. Naviger brugeren til deres personlige profilside.
         NavManager.NavigateTo("/UserProfile");
     }
 
-    // -- Page-Specific Model Class --
+    // ------------------- PAGE-SPECIFIC MODEL CLASS -------------------
+    // En privat, indlejret klasse, der kun bruges af denne side.
+
+    /// <summary>
+    /// Definerer datastrukturen og valideringsreglerne for login-formularen.
+    /// </summary>
     private class LoginModel
     {
+        // [Required] sikrer, at feltet ikke må være tomt.
+        // [EmailAddress] sikrer, at den indtastede streng har format som en email.
         [Required(ErrorMessage = "Email er påkrævet")]
         [EmailAddress(ErrorMessage = "Indtast venligst en gyldig email-adresse")]
         public string Email { get; set; } = string.Empty;

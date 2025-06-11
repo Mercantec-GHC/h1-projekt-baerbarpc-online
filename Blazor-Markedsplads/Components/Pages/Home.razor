@@ -1,6 +1,7 @@
 ﻿@page "/"
-@inject NavigationManager NavManager
-@inject IListingRepository ListingRepo
+@inject NavigationManager NavManager      // Til at styre navigation mellem sider.
+@inject IListingRepository ListingRepo    // Til at kommunikere med databasen om 'Listings'. Defineret i Services/IListingRepository.cs.
+
 @rendermode InteractiveServer
 
 <PageTitle>LaptopMarket – Forside</PageTitle>
@@ -79,58 +80,97 @@
 
 
 @code {
-    // -- Page State --
+    // ------------------- PAGE STATE -------------------
+    // State-variable er komponentens interne data.
+
+    // En liste til at holde de premium-annoncer, der hentes fra databasen. Starter som en tom liste.
     private List<Listing> premiumListings = new();
+
+    // En streng til at vise en fejlbesked i UI'et, hvis datahentning fejler. '?' betyder, den kan være null.
     private string? loadError;
+
+    // En streng, der er bundet til søgefeltet. Holder den tekst, brugeren indtaster.
     private string? searchTerm;
 
-    // -- Lifecycle Methods --
+    // ------------------- LIFECYCLE METHODS -------------------
+    // Metoder, som Blazor kalder automatisk på bestemte tidspunkter i en komponents levetid.
+
+    /// <summary>
+    /// Kører, når komponenten bliver initialiseret. Ideel til at hente asynkrone data, som siden skal bruge fra start.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
+        // try-catch-blokken sikrer, at applikationen ikke crasher, hvis databasen ikke kan nås.
         try
         {
-            // Hent de 4 dyreste annoncer til visning på forsiden.
+            // 'await' pauser metoden, indtil databasekaldet er færdigt, uden at blokere resten af appen.
+            // Kalder GetPremiumAsync i vores repository for at hente de 4 dyreste annoncer.
+            // Resultatet gemmes i sidens state-variabel.
             premiumListings = await ListingRepo.GetPremiumAsync(4);
         }
         catch (Exception ex)
         {
+            // Hvis der opstår en fejl, logges den til konsollen (for udvikleren).
             Console.WriteLine($"Error fetching premium listings: {ex.Message}");
+            // En brugervenlig fejlbesked sættes til 'loadError'-variablen, som så vises i UI'et.
             loadError = "Der opstod en fejl under indlæsning af premium-annoncer. Prøv igen senere.";
         }
     }
 
-    // -- Event Handlers --
+    // ------------------- EVENT HANDLERS -------------------
+    // Metoder, der kører som reaktion på brugerhandlinger som klik og tastetryk.
+
+    /// <summary>
+    /// Håndterer søge-eventet, enten fra knappen eller Enter-tasten.
+    /// </summary>
     private void Search()
     {
-        // Navigerer til den generelle annonceside med søgeordet som en parameter i URL'en.
-        // Hvis søgefeltet er tomt, navigeres til annoncesiden uden et søgefilter.
+        // Sammensætter den URL, vi skal navigere til, baseret på om der er tekst i søgefeltet.
+        // Uri.EscapeDataString sikrer, at specialtegn (f.eks. mellemrum) bliver korrekt håndteret i URL'en.
         var targetUrl = !string.IsNullOrWhiteSpace(searchTerm)
             ? $"/ListingPage?query={Uri.EscapeDataString(searchTerm)}"
             : "/ListingPage";
 
+        // Bruger NavigationManager til at sende brugeren til den nye URL.
+        // Dette aktiverer 'ListingPage.razor'-komponenten og overfører søgeordet som en parameter.
         NavManager.NavigateTo(targetUrl);
     }
 
+    /// <summary>
+    /// Kaldes af @onkeyup-eventet på søgefeltet.
+    /// </summary>
+    /// <param name="e">Indeholder information om den tast, der blev trykket på.</param>
     private void HandleSearchInput(KeyboardEventArgs e)
     {
-        // Giver brugeren mulighed for at starte en søgning ved at trykke på Enter.
+        // Tjekker, om den tast, der blev sluppet, var "Enter"-tasten.
         if (e.Key == "Enter")
         {
+            // Hvis ja, starter den en søgning.
             Search();
         }
     }
 
+    /// <summary>
+    /// Navigerer brugeren til siden for oprettelse af annonce.
+    /// </summary>
     private void NavigateCreateAd()
     {
-        // Simpel navigation til siden for oprettelse af annonce.
+        // Simpel navigation til '/CreateListing', som er defineret i 'CreateListing.razor'.
         NavManager.NavigateTo("/CreateListing");
     }
 
-    // -- Helper Methods --
+    // ------------------- HELPER METHODS -------------------
+    // Private metoder, der udfører små, specifikke opgaver for at holde koden ren.
+
+    /// <summary>
+    /// Formaterer en decimalpris til en pænere tekst-streng.
+    /// </summary>
+    /// <param name="price">Prisen som et decimaltal.</param>
+    /// <returns>En formateret streng, f.eks. "1.500 kr.".</returns>
     private static string FormatPrice(decimal price)
     {
-        // Formaterer prisen pænt med tusindtalsseparator og "kr."
-        // Viser en standardtekst, hvis prisen ikke er sat.
+        // 'price > 0' er en kort måde at tjekke, om prisen er sat.
+        // ':N0' formaterer tallet med tusindtalsseparator og uden decimaler.
         return price > 0 ? $"{price:N0} kr." : "Pris efter aftale";
     }
 }
