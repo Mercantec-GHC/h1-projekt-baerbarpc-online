@@ -2,10 +2,11 @@
 @using System.ComponentModel.DataAnnotations
 @using BlazorMarkedsplads.Models
 @using BlazorMarkedsplads.Services
-@using BCrypt.Net;
+@using BCrypt.Net
 @inject IUserRepository UserRepo
 @inject NavigationManager NavManager
 @inject IJSRuntime JSRuntime
+@inject UserStateService UserState
 @rendermode InteractiveServer
 
 <PageTitle>Log ind</PageTitle>
@@ -56,30 +57,25 @@
 </section>
 
 @code {
-    [Inject]
-    private UserStateService UserState { get; set; } = default!;
-
+    // -- Form Model & State --
     private LoginModel loginModel = new();
     private string? formError;
 
+    // -- Event Handlers --
     private async Task HandleValidSubmit()
     {
-        formError = null;
+        formError = null; // Nulstil fejlbeskeder ved hvert forsøg.
 
         try
         {
+            // Trin 1: Find brugeren baseret på email.
             var user = await UserRepo.GetByEmailAsync(loginModel.Email);
 
+            // Trin 2: Verificer, at brugeren findes OG at passwordet er korrekt.
             if (user != null && BCrypt.Verify(loginModel.Password, user.Password))
             {
-                // Gem bruger-ID i browseren for at "huske" login efter en F5-refresh
-                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "uid", user.Id.ToString());
-
-                // *** NYT: Fortæl vores state service, at brugeren er logget ind ***
-                UserState.Login(user.Id);
-
-                // Naviger til brugerens profilside
-                NavManager.NavigateTo("/UserProfile"); 
+                // Trin 3: Udfør selve login-handlingen.
+                await LogUserInAsync(user);
             }
             else
             {
@@ -88,13 +84,26 @@
         }
         catch (Exception ex)
         {
-            formError = $"Der opstod en fejl: {ex.Message}";
+            formError = $"Der opstod en systemfejl: {ex.Message}";
+            Console.WriteLine($"Login-fejl: {ex}");
         }
     }
 
-    /// <summary>
-    /// A nested class to hold the form data for the login page.
-    /// </summary>
+    // -- Helper Methods --
+    private async Task LogUserInAsync(User user)
+    {
+        // Gem bruger-ID i browserens `localStorage` for at huske login på tværs af sessions/refreshes.
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "uid", user.Id.ToString());
+
+        // Opdater den delte `UserStateService`, så UI-elementer (som MainLayout)
+        // øjeblikkeligt reagerer på, at brugeren er logget ind.
+        UserState.Login(user.Id);
+
+        // Naviger brugeren til deres personlige profilside.
+        NavManager.NavigateTo("/UserProfile");
+    }
+
+    // -- Page-Specific Model Class --
     private class LoginModel
     {
         [Required(ErrorMessage = "Email er påkrævet")]

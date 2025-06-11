@@ -5,20 +5,18 @@
 
 <PageTitle>Alle Annoncer</PageTitle>
 
-
 <div class="container py-5">
     @if (!string.IsNullOrWhiteSpace(Query))
     {
-        <h3>Søgeresultater for "@Query"</h3>
+        <h3 class="fw-bold mb-4">Søgeresultater for "@Query"</h3>
     }
     else
     {
-        <h3>Alle Annoncer</h3>
+        <h3 class="fw-bold mb-4">Alle Annoncer</h3>
     }
 
-    <div class="row mb-3">
-        <div class="col-md-8">
-            @* filterTerm er nu bundet til søgefeltet *@
+    <div class="row mb-4">
+        <div class="col-md-8 mb-2 mb-md-0">
             <InputText @bind-Value="filterTerm" placeholder="Søg på titel, brand, model..." class="form-control" @onkeyup="HandleSearchInput" />
         </div>
         <div class="col-md-4">
@@ -47,7 +45,6 @@
                                  class="card-img-top product-img"
                                  alt="@p.Title" />
 
-
                             <div class="card-body">
                                 <h5 class="card-title fw-semibold" style="min-height: 48px;">@p.Title</h5>
                                 <p class="card-text small text-muted">@($"{p.Brand} {p.Model}")</p>
@@ -59,7 +56,6 @@
 
                                 <p class="card-text fw-bold text-success mb-1">@FormatPrice(p.Price)</p>
                             </div>
-
 
                             <div class="card-footer bg-white border-0 py-2 d-flex justify-content-between align-items-center">
                                 <span class="small text-muted">@p.Location</span>
@@ -78,52 +74,60 @@
 </div>
 
 @code {
-    private List<Listing>? allListings;
-    private string filterTerm = ""; // Bruges til input-feltet
-    private string? errorMsg;
-
-    // RETTELSE 1: Vi opretter en property til at modtage søgeordet fra URL'en.
+    // -- Parameters --
     [Parameter]
     [SupplyParameterFromQuery]
-    public string? Query { get; set; }
+    public string? Query { get; set; } // Modtager søgeord fra URL (?query=...)
 
-    // RETTELSE 2: Vi bruger OnParametersSetAsync, som kører HVER GANG URL'en (og dens parametre) ændres.
+    // -- Page State --
+    private List<Listing>? allListings;
+    private string filterTerm = ""; // Bundet til søgefeltets input
+    private string? errorMsg;
+
+    // -- Lifecycle Methods --
     protected override async Task OnParametersSetAsync()
     {
-        // Vi opdaterer søgefeltet med det, der står i URL'en.
-        filterTerm = Query ?? "";
+        // Denne metode er nøglen til en dynamisk side. Den kører HVER GANG
+        // en parameter (som 'Query' fra URL'en) ændres.
+
+        filterTerm = Query ?? ""; // Opdater søgefeltet, så det matcher URL'en.
 
         try
         {
-            // Vi bruger Query-parameteren fra URL'en til at hente data.
+            // Hent data baseret på det nuværende Query. Hvis Query er tomt,
+            // henter SearchAsync (ideelt set) alle annoncer.
             allListings = await ListingRepo.SearchAsync(Query ?? "");
-            errorMsg = null;
+            errorMsg = null; // Nulstil fejlbesked ved succesfuld hentning.
         }
         catch (Exception ex)
         {
             errorMsg = $"Fejl ved hentning af annoncer: {ex.Message}";
+            Console.WriteLine(ex);
         }
     }
 
-    // RETTELSE 3: Når man søger på siden, opdaterer vi nu URL'en, hvilket genindlæser komponenten korrekt.
+    // -- Event Handlers --
     private void Search()
     {
+        // I stedet for at genindlæse data direkte, navigerer vi til en ny URL.
+        // Denne navigation får Blazor til at køre OnParametersSetAsync igen,
+        // hvilket sikrer, at sidens tilstand er synkroniseret med URL'en.
         NavManager.NavigateTo($"/ListingPage?query={Uri.EscapeDataString(filterTerm)}");
     }
 
     private void HandleSearchInput(KeyboardEventArgs e)
     {
+        // Giver brugeren mulighed for at søge ved at trykke Enter.
         if (e.Key == "Enter")
         {
             Search();
         }
     }
 
+    // -- Helper Methods --
     private static string FormatPrice(decimal price)
     {
-        if (price <= 0)
-            return "Pris aftales";
-
-        return $"{price.ToString("N0")} kr";
+        // Formaterer prisen for en konsistent visning.
+        return price > 0 ? $"{price:N0} kr." : "Pris aftales";
     }
 }

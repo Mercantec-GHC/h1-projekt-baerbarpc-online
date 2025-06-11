@@ -10,109 +10,6 @@
 
 <PageTitle>Opret Konto</PageTitle>
 
-@code {
-    [SupplyParameterFromForm]
-    private RegisterModel register { get; set; } = new();
-    private string? formError;
-
-    private bool userJustCreated = false;
-    private int createdUserId;
-
-    private async Task HandleValidSubmit()
-    {
-        Console.WriteLine($"[DEBUG] Før DB-indsættelse: " +
-                          $"FullName='{register.FullName}', " +
-                          $"Email='{register.Email}', " +
-                          $"Password='{register.Password}', " +
-                          $"ConfirmPassword='{register.ConfirmPassword}', " +
-                          $"Phone='{register.Phone}', " +
-                          $"Address='{register.Address}', " +
-                          $"City='{register.City}', " +
-                          $"PostalCode='{register.PostalCode}', " +
-                          $"AcceptTerms='{register.AcceptTerms}'");
-
-        // Valider at alle påkrævede felter er udfyldt
-        if (string.IsNullOrWhiteSpace(register.FullName) ||
-            string.IsNullOrWhiteSpace(register.Email) ||
-            string.IsNullOrWhiteSpace(register.Password))
-        {
-            formError = "Navn, email og adgangskode er påkrævede felter.";
-            return;
-        }
-
-        if (register.Password != register.ConfirmPassword)
-        {
-            formError = "Adgangskoderne matcher ikke.";
-            return;
-        }
-
-        if (!register.AcceptTerms)
-        {
-            formError = "Du skal acceptere vilkår og betingelser.";
-            return;
-        }
-
-        var u = new User
-            {
-                Name = register.FullName,
-                Email = register.Email,
-                Password = BCrypt.HashPassword(register.Password),
-                Phone = register.Phone ?? string.Empty,
-                Address = register.Address ?? string.Empty,
-                City = register.City ?? string.Empty,
-                ZipCode = register.PostalCode ?? string.Empty
-            };
-
-        try
-        {
-            var id = await UserRepo.InsertAsync(u);
-            createdUserId = id;
-            userJustCreated = true;
-            formError = null; // Ryd fejlbesked
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            formError = $"Kunne ikke oprette bruger: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (userJustCreated)
-        {
-            userJustCreated = false;
-            await JS.InvokeVoidAsync("localStorage.setItem", "uid", createdUserId.ToString());
-            NavManager.NavigateTo("/UserProfile");
-        }
-    }
-
-    private class RegisterModel
-    {
-        [Required(ErrorMessage = "Navn er påkrævet")]
-        public string FullName { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Email er påkrævet")]
-        [EmailAddress(ErrorMessage = "Ugyldig email adresse")]
-        public string Email { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Adgangskode er påkrævet")]
-        [MinLength(6, ErrorMessage = "Adgangskode skal være mindst 6 tegn")]
-        public string Password { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Bekræft adgangskode er påkrævet")]
-        public string ConfirmPassword { get; set; } = string.Empty;
-
-        public string? Phone { get; set; }
-        public string? Address { get; set; }
-        public string? City { get; set; }
-        public string? PostalCode { get; set; }
-
-        [Range(typeof(bool), "true", "true", ErrorMessage = "Du skal acceptere vilkår og betingelser")]
-        public bool AcceptTerms { get; set; }
-    }
-}
-
 <section class="py-5" style="background-color:#f0f0f0; min-height:65vh;">
     <div class="container d-flex justify-content-center">
         <div class="card shadow-sm border-0" style="max-width:520px; width:100%;">
@@ -125,88 +22,81 @@
                     <div class="alert alert-danger">@formError</div>
                 }
 
-                <!-- Tilføjet FormName tilbage for at løse POST request fejlen -->
-                <EditForm Model="register" OnValidSubmit="HandleValidSubmit" FormName="CreateUserForm">
+                <EditForm Model="registerModel" OnValidSubmit="HandleRegistrationAsync" FormName="CreateUserForm">
                     <DataAnnotationsValidator />
                     <ValidationSummary class="text-danger" />
 
-                    <!-- Fulde navn -->
+                    @* --- Din <EditForm> HTML-del forbliver uændret her --- *@
+                    @* --- Udeladt for læsbarhed, da den er identisk. --- *@
+
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Fulde navn *</label>
                         <InputText class="form-control"
-                                   @bind-Value="register.FullName"
+                                   @bind-Value="registerModel.FullName"
                                    placeholder="Indtast dit fulde navn" />
-                        <ValidationMessage For="@(() => register.FullName)" class="text-danger small" />
+                        <ValidationMessage For="@(() => registerModel.FullName)" class="text-danger small" />
                     </div>
 
-                    <!-- Email -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Email *</label>
                         <InputText class="form-control"
                                    type="email"
-                                   @bind-Value="register.Email"
+                                   @bind-Value="registerModel.Email"
                                    placeholder="Indtast din email" />
-                        <ValidationMessage For="@(() => register.Email)" class="text-danger small" />
+                        <ValidationMessage For="@(() => registerModel.Email)" class="text-danger small" />
                     </div>
 
-                    <!-- Adgangskode -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Adgangskode *</label>
                         <InputText class="form-control"
                                    type="password"
-                                   @bind-Value="register.Password" />
-                        <ValidationMessage For="@(() => register.Password)" class="text-danger small" />
+                                   @bind-Value="registerModel.Password" />
+                        <ValidationMessage For="@(() => registerModel.Password)" class="text-danger small" />
                     </div>
 
-                    <!-- Bekræft adgangskode -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Bekræft adgangskode *</label>
                         <InputText class="form-control"
                                    type="password"
-                                   @bind-Value="register.ConfirmPassword" />
-                        <ValidationMessage For="@(() => register.ConfirmPassword)" class="text-danger small" />
+                                   @bind-Value="registerModel.ConfirmPassword" />
+                        <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-danger small" />
                     </div>
 
-                    <!-- Telefonnummer -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Telefonnummer</label>
                         <InputText class="form-control"
-                                   @bind-Value="register.Phone"
+                                   @bind-Value="registerModel.Phone"
                                    placeholder="Indtast dit telefonnummer" />
                     </div>
 
-                    <!-- Adresse -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Adresse</label>
                         <InputText class="form-control"
-                                   @bind-Value="register.Address"
+                                   @bind-Value="registerModel.Address"
                                    placeholder="Indtast din adresse" />
                     </div>
 
-                    <!-- By -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">By</label>
                         <InputText class="form-control"
-                                   @bind-Value="register.City"
+                                   @bind-Value="registerModel.City"
                                    placeholder="Indtast by" />
                     </div>
 
-                    <!-- Postnummer -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Postnummer</label>
                         <InputText class="form-control"
-                                   @bind-Value="register.PostalCode"
+                                   @bind-Value="registerModel.PostalCode"
                                    placeholder="Indtast postnummer" />
                     </div>
 
-                    <!-- Vilkår og betingelser -->
                     <div class="form-check mb-3">
                         <InputCheckbox class="form-check-input"
-                                       @bind-Value="register.AcceptTerms" />
+                                       @bind-Value="registerModel.AcceptTerms" />
                         <label class="form-check-label small">
                             Jeg accepterer vilkår og betingelser *
                         </label>
-                        <ValidationMessage For="@(() => register.AcceptTerms)" class="text-danger small d-block" />
+                        <ValidationMessage For="@(() => registerModel.AcceptTerms)" class="text-danger small d-block" />
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100 mb-3">
@@ -221,3 +111,114 @@
         </div>
     </div>
 </section>
+
+@code {
+    // -- Form Model & State --
+    [SupplyParameterFromForm]
+    private RegisterModel registerModel { get; set; } = new();
+    private string formError = string.Empty;
+
+    // -- Post-Action State --
+    private bool userJustCreated = false;
+    private int createdUserId;
+
+    // -- Event Handlers --
+    private async Task HandleRegistrationAsync()
+    {
+        formError = string.Empty;
+
+        if (IsFormValid())
+        {
+            try
+            {
+                await CreateUserInDatabaseAsync();
+
+                // Sæt flag, så OnAfterRenderAsync kan håndtere login og navigation.
+                userJustCreated = true;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                // Håndter specifikt dublet-email fejl eller andre DB fejl.
+                formError = ex.Message.Contains("duplicate key value violates unique constraint \"users_email_key\"")
+                    ? "En bruger med denne email findes allerede."
+                    : $"Kunne ikke oprette bruger: {ex.Message}";
+            }
+        }
+    }
+
+    // -- Lifecycle Methods --
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (userJustCreated)
+        {
+            // Nulstil flaget for at undgå at koden kører igen.
+            userJustCreated = false;
+
+            // Gem brugerens ID i browseren for at "logge ind" med det samme.
+            await JS.InvokeVoidAsync("localStorage.setItem", "uid", createdUserId.ToString());
+
+            // Naviger brugeren til deres nye profilside.
+            NavManager.NavigateTo("/UserProfile", forceLoad: true); // forceLoad sikrer, at hele app'en genindlæses med den nye login-status.
+        }
+    }
+
+    // -- Helper Methods --
+    private bool IsFormValid()
+    {
+        if (registerModel.Password != registerModel.ConfirmPassword)
+        {
+            formError = "Adgangskoderne matcher ikke.";
+            return false;
+        }
+        if (!registerModel.AcceptTerms)
+        {
+            formError = "Du skal acceptere vilkår og betingelser.";
+            return false;
+        }
+        return true;
+    }
+
+    private async Task CreateUserInDatabaseAsync()
+    {
+        var newUser = new User
+        {
+            Name = registerModel.FullName,
+            Email = registerModel.Email,
+            Password = BCrypt.HashPassword(registerModel.Password), // Vigtigt: Hash adgangskoden!
+            Phone = registerModel.Phone ?? string.Empty,
+            Address = registerModel.Address ?? string.Empty,
+            City = registerModel.City ?? string.Empty,
+            ZipCode = registerModel.PostalCode ?? string.Empty
+        };
+
+        createdUserId = await UserRepo.InsertAsync(newUser);
+    }
+
+    // -- Page-Specific Model Class --
+    private class RegisterModel
+    {
+        [Required(ErrorMessage = "Fulde navn er påkrævet")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email er påkrævet")]
+        [EmailAddress(ErrorMessage = "Ugyldig email adresse")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Adgangskode er påkrævet")]
+        [MinLength(6, ErrorMessage = "Adgangskode skal være mindst 6 tegn")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Bekræft adgangskode er påkrævet")]
+        [Compare(nameof(Password), ErrorMessage = "Adgangskoderne matcher ikke")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        public string? Phone { get; set; }
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? PostalCode { get; set; }
+
+        [Range(typeof(bool), "true", "true", ErrorMessage = "Du skal acceptere vilkår og betingelser")]
+        public bool AcceptTerms { get; set; }
+    }
+}

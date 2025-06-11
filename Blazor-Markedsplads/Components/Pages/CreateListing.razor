@@ -1,20 +1,19 @@
 ﻿@page "/CreateListing"
-@inject NavigationManager NavManager
-@inject IListingRepository ListingRepo
-@inject IWebHostEnvironment Environment
-@inject UserStateService UserState
-@using System.IO                   
+@inject NavigationManager NavManager      // Til at styre navigation mellem sider.
+@inject IListingRepository ListingRepo    // Til at kommunikere med databasen om 'Listings'. Defineret i Services/IListingRepository.cs.
+@inject IWebHostEnvironment Environment   // Til at finde stier på serveren, f.eks. til billed-uploads i 'wwwroot'.
+@inject UserStateService UserState        // Den centrale service, der holder styr på brugerens login-status.
+@using System.IO                         
 @using BlazorMarkedsplads.Models
-@rendermode InteractiveServer
+@rendermode InteractiveServer             // Gør det muligt at interagere med siden uden at genindlæse den.
 
-<PageTitle>Opret Annonce</PageTitle>
-
+<PageTitle>@pageTitle</PageTitle>
 
 <section class="py-5" style="background-color:#f8f9fa; min-height:70vh;">
     <div class="container d-flex justify-content-center">
         <div class="card shadow-sm border-0" style="max-width: 650px; width:100%;">
             <div class="card-body p-4 p-md-5">
-                <h4 class="fw-bold">Opret Annonce</h4>
+                <h4 class="fw-bold">@pageTitle</h4>
                 <p class="text-muted mb-4">Udfyld oplysninger om din bærbare computer</p>
 
                 @if (!string.IsNullOrWhiteSpace(formError))
@@ -22,8 +21,9 @@
                     <div class="alert alert-danger">@formError</div>
                 }
 
-                <EditForm Model="createModel" OnValidSubmit="HandleSubmit" FormName="CreateListingForm">
+                <EditForm Model="createModel" OnValidSubmit="HandleValidSubmit" FormName="CreateListingForm">
                     <DataAnnotationsValidator />
+
                     <div class="row g-3">
                         <div class="col-12">
                             <label for="title" class="form-label fw-semibold">Overskrift</label>
@@ -141,7 +141,7 @@
 
                         <div class="col-12">
                             <label for="images" class="form-label fw-semibold">Billeder (op til 5)</label>
-                            <InputFile id="images" class="form-control" OnChange="LoadFiles" multiple />
+                            <InputFile id="images" class="form-control" OnChange="HandleFileSelected" multiple />
                         </div>
 
                         @if (uploadedFileNames.Any())
@@ -172,7 +172,7 @@
 
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary flex-grow-1">
-                            Opret annonce
+                            @submitButtonText
                         </button>
                     </div>
                 </EditForm>
@@ -182,167 +182,254 @@
 </section>
 
 @code {
+    // ------------------- PARAMETERS -------------------
+    // En parameter er data, som komponenten modtager udefra.
 
-    // NY PARAMETER til at modtage ID fra URL'en
+    // [Parameter] angiver, at dette er en komponentparameter.
+    // [SupplyParameterFromQuery] betyder, at værdien kan komme fra URL'ens query string (f.eks. ?editId=123).
     [Parameter]
     [SupplyParameterFromQuery]
     public int? EditId { get; set; }
+
+    // ------------------- PAGE STATE -------------------
+    // State-variable er komponentens interne hukommelse. De holder styr på data, mens siden er åben.
+
+    // 'createModel' er et Listing-objekt, som EditForm er bundet til. Det holder alle data fra formularfelterne.
     private Listing createModel = new();
-    private string? formError;
 
+    // En streng til at vise fejlbeskeder til brugeren i toppen af formularen.
+    private string formError = string.Empty;
 
+    // Variable til dynamisk at ændre teksten i UI'et baseret på, om vi opretter eller redigerer.
     private string pageTitle = "Opret Annonce";
     private string submitButtonText = "Opret annonce";
 
-    // NYE LISTER TIL AT HÅNDTERE UPLOADEDE FILER
-    private List<string> uploadedFilePaths = new();
-    private List<string> uploadedFileNames = new();
+    // En "computed property", der hurtigt fortæller os, om vi er i redigeringstilstand.
+    private bool IsEditMode => EditId.HasValue;
 
+    // ------------------- FILE UPLOAD STATE -------------------
 
+    // En liste til at holde de faktiske filer, som brugeren har valgt. Klar til at blive streamet til serveren.
+    private readonly List<IBrowserFile> loadedFiles = new();
 
-    private async Task LoadFiles(InputFileChangeEventArgs e)
-    {
-        uploadedFileNames.Clear();
-        uploadedFilePaths.Clear();
-        formError = null;
+    // En liste til kun at holde filnavnene, som vi viser i UI'et som bekræftelse til brugeren.
+    private readonly List<string> uploadedFileNames = new();
 
-        var uploadPath = Path.Combine(Environment.WebRootPath, "uploads", "listings");
-        Directory.CreateDirectory(uploadPath);
+    // ------------------- LIFECYCLE METHODS -------------------
+    // Livscyklus-metoder er specielle metoder, som Blazor kalder automatisk på bestemte tidspunkter.
 
-        foreach (var file in e.GetMultipleFiles(5))
-        {
-            try
-            {
-                var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
-                var fullPath = Path.Combine(uploadPath, uniqueFileName);
-
-                await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-                await using var fs = new FileStream(fullPath, FileMode.Create);
-                await stream.CopyToAsync(fs);
-
-                uploadedFileNames.Add(file.Name);
-                uploadedFilePaths.Add(uniqueFileName);
-            }
-            catch (Exception ex)
-            {
-                formError = $"Fejl under upload af fil '{file.Name}': {ex.Message}";
-                uploadedFileNames.Clear();
-                uploadedFilePaths.Clear();
-                return;
-            }
-        }
-    }
-
-    // TILFØJ EN SIKKERHEDSTJEK
+    /// <summary>
+    /// Kører én gang, når komponenten bliver initialiseret. Bruges her til at tjekke brugerens login-status.
+    /// </summary>
     protected override void OnInitialized()
     {
+        // Tjekker den centrale UserStateService for at se, om en bruger er logget ind.
         if (!UserState.IsLoggedIn)
         {
-            NavManager.NavigateTo("/login"); // Send brugeren til login, hvis de ikke er logget ind
+            // Hvis ikke, omdirigeres brugeren til login-siden via NavigationManager.
+            NavManager.NavigateTo("/login");
         }
     }
 
+    /// <summary>
+    /// Kører, HVER GANG komponentens parametre (som EditId) bliver sat eller ændret.
+    /// Perfekt til at hente data eller ændre tilstand baseret på URL'en.
+    /// </summary>
     protected override async Task OnParametersSetAsync()
     {
-        if (EditId.HasValue) // Er vi i rediger-tilstand?
+        // Tjekker, om vi er i redigeringstilstand (dvs. om der er et 'editId' i URL'en).
+        if (IsEditMode)
         {
-            pageTitle = "Rediger Annonce";
-            submitButtonText = "Gem Ændringer";
-
-            var existingListing = await ListingRepo.GetByIdAsync(EditId.Value);
-            if (existingListing != null)
-            {
-                createModel = existingListing; // Udfyld formularen med eksisterende data
-            }
-            else
-            {
-                formError = "Annoncen du prøver at redigere blev ikke fundet.";
-                EditId = null; // Gå tilbage til opret-tilstand
-            }
+            // Hvis ja, kalder vi en helper-metode til at hente den eksisterende annonce.
+            await LoadExistingListingForEdit();
         }
-        else // Opret-tilstand
+        else
         {
+            // Hvis nej, sikrer vi, at siden er i "opret"-tilstand med tomme felter og korrekte tekster.
             pageTitle = "Opret Annonce";
             submitButtonText = "Opret annonce";
-            createModel = new Listing(); // Nulstil modellen
+            createModel = new Listing();
         }
     }
 
-    private async Task HandleSubmit()
+    // ------------------- EVENT HANDLERS -------------------
+    // Event Handlers er metoder, der kører som reaktion på brugerhandlinger.
+
+    /// <summary>
+    /// Denne metode kaldes af EditForm's 'OnValidSubmit'-event. Den fungerer som startpunktet for hele formular-submission processen.
+    /// </summary>
+    private async Task HandleValidSubmit()
     {
-        formError = null;
+        // Nulstil fejlbeskeder ved hvert nyt forsøg.
+        formError = string.Empty;
 
-        if (!createModel.AcceptTerms)
+        // Kører vores egne, manuelle valideringer (f.eks. at tjekke dropdowns, der ikke er dækket af DataAnnotations).
+        if (!IsCustomValidationValid())
         {
-            formError = "Du skal acceptere vilkår og betingelser.";
-            return;
+            return; // Afbryd processen, hvis validering fejler.
         }
-
-        if (createModel.Ram == 0)
-        {
-            formError = "Du skal vælge en RAM-størrelse.";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(createModel.ScreenSize))
-        {
-            formError = "Du skal vælge en skærmstørrelse.";
-            return;
-        }
-
-        if (!UserState.UserId.HasValue)
-        {
-            formError = "Fejl: Kunne ikke identificere bruger. Prøv at logge ind igen.";
-            return;
-        }
-
-
-
-        createModel.UserId = UserState.UserId.Value; // <-- VIGTIGT!
-        createModel.CreatedUtc = DateTime.UtcNow;
-
-        var listing = new Listing
-        {
-            UserId = createModel.UserId,
-            Brand = createModel.Brand?.Trim() ?? string.Empty,
-            Model = createModel.Model?.Trim() ?? string.Empty,
-            Gpu = createModel.Gpu?.Trim() ?? string.Empty,
-            Cpu = createModel.Cpu?.Trim() ?? string.Empty,
-            Ram = createModel.Ram,
-            Storage = createModel.Storage,
-            OS = createModel.OS?.Trim() ?? string.Empty,
-            Price = createModel.Price,
-            ScreenSize = createModel.ScreenSize?.Trim() ?? string.Empty,
-            Condition = createModel.Condition?.Trim() ?? string.Empty,
-            Title = createModel.Title?.Trim() ?? string.Empty,
-            Description = createModel.Description?.Trim() ?? string.Empty,
-            Phone = createModel.Phone?.Trim() ?? string.Empty,
-            Location = createModel.Location?.Trim() ?? string.Empty,
-            CreatedUtc = createModel.CreatedUtc
-        };
 
         try
         {
-            if (EditId.HasValue) // Gemmer vi en eksisterende annonce?
+            // Udfør enten opdatering eller oprettelse baseret på, om vi er i redigeringstilstand.
+            if (IsEditMode)
             {
-                createModel.Id = EditId.Value; // Sørg for at ID er sat
-                await ListingRepo.UpdateAsync(createModel);
-                NavManager.NavigateTo($"/ListingDetailsPage/{createModel.Id}"); // Gå til den redigerede annonce
+                await HandleUpdateAsync();
             }
-            else // Opretter vi en ny?
+            else
             {
-                if (!UserState.UserId.HasValue) { /* ... fejlhåndtering ... */ return; }
-                createModel.UserId = UserState.UserId.Value;
-                createModel.CreatedUtc = DateTime.UtcNow;
-
-                int newId = await ListingRepo.InsertAsync(createModel);
-                // ... håndter billeder som før ...
-                NavManager.NavigateTo("/ListingPage");
+                await HandleCreateAsync();
             }
         }
         catch (Exception ex)
         {
-            formError = $"Der opstod en fejl: {ex.Message}";
+            // Hvis noget uventet går galt i databasen, vises en generel fejlbesked.
+            formError = $"Der opstod en systemfejl: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Denne metode kaldes af InputFile-komponentens 'OnChange'-event, når brugeren vælger filer.
+    /// </summary>
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        // Nulstil listerne for at fjerne eventuelle tidligere valgte filer.
+        loadedFiles.Clear();
+        uploadedFileNames.Clear();
+
+        // Hent de valgte filer (maks. 5) og tilføj dem til 'loadedFiles'-listen.
+        loadedFiles.AddRange(e.GetMultipleFiles(5));
+
+        // Udfyld listen med filnavne, som vi kan vise i UI'et.
+        foreach (var file in loadedFiles)
+        {
+            uploadedFileNames.Add(file.Name);
+        }
+
+        // Nulstil fejlbeskeden, da brugeren nu har interageret med fil-input.
+        formError = string.Empty;
+    }
+
+    // ------------------- HELPER METHODS -------------------
+    // Helper-metoder er private metoder, der udfører specifikke, genbrugelige opgaver for at holde event-handlerne rene og overskuelige.
+
+    /// <summary>
+    /// Henter en eksisterende annonce fra databasen og udfylder formularen med dens data.
+    /// </summary>
+    private async Task LoadExistingListingForEdit()
+    {
+        // Kalder repository'et for at hente annoncen med det ID, vi har fået fra URL'en.
+        var existingListing = await ListingRepo.GetByIdAsync(EditId.Value);
+
+        // Tjekker, om annoncen findes, OG om den tilhører den bruger, der er logget ind. Vigtig sikkerhedsforanstaltning.
+        if (existingListing != null && existingListing.UserId == UserState.UserId)
+        {
+            // Opdater UI-tekster til "rediger"-tilstand.
+            pageTitle = "Rediger Annonce";
+            submitButtonText = "Gem Ændringer";
+
+            // Sæt 'createModel' til at være det hentede objekt. Blazor opdaterer automatisk alle input-felter i formularen.
+            createModel = existingListing;
+        }
+        else
+        {
+            // Hvis annoncen ikke findes eller tilhører en anden, vises en fejl og brugeren sendes tilbage til en tom opret-side.
+            formError = "Annoncen blev ikke fundet, eller du har ikke tilladelse til at redigere den.";
+            NavManager.NavigateTo("/CreateListing");
+        }
+    }
+
+    /// <summary>
+    /// Håndterer logikken for at oprette en HELT NY annonce.
+    /// </summary>
+    private async Task HandleCreateAsync()
+    {
+        // Tildel den nye annonce til den aktive bruger og sæt et tidsstempel.
+        createModel.UserId = UserState.UserId.Value;
+        createModel.CreatedUtc = DateTime.UtcNow;
+
+        // Kald repository'et for at indsætte data i databasen. Metoden returnerer det nye ID.
+        int newId = await ListingRepo.InsertAsync(createModel);
+
+        // Kald helper-metoden til at behandle og gemme eventuelt uploadede billeder, knyttet til det nye ID.
+        await ProcessImagesAsync(newId);
+
+        // Send brugeren videre til den nye annonces detaljeside (ListingDetailsPage.razor).
+        NavManager.NavigateTo($"/ListingDetailsPage/{newId}");
+    }
+
+    /// <summary>
+    /// Håndterer logikken for at opdatere en EKSISTERENDE annonce.
+    /// </summary>
+    private async Task HandleUpdateAsync()
+    {
+        // Kald repository'et for at opdatere den eksisterende række i databasen med de nye data fra 'createModel'.
+        await ListingRepo.UpdateAsync(createModel);
+
+        // Behandl og gem eventuelle NYE billeder, brugeren har tilføjet under redigeringen.
+        await ProcessImagesAsync(createModel.Id);
+
+        // Send brugeren tilbage til den nu opdaterede annonces detaljeside.
+        NavManager.NavigateTo($"/ListingDetailsPage/{createModel.Id}");
+    }
+
+    /// <summary>
+    /// Indeholder specifikke valideringsregler, som ikke dækkes af DataAnnotations.
+    /// </summary>
+    /// <returns>True, hvis alle regler er overholdt, ellers false.</returns>
+    private bool IsCustomValidationValid()
+    {
+        if (!createModel.AcceptTerms)
+        {
+            formError = "Du skal acceptere vilkår og betingelser.";
+            return false;
+        }
+        if (createModel.Ram == 0)
+        {
+            formError = "Du skal vælge en RAM-størrelse.";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(createModel.ScreenSize))
+        {
+            formError = "Du skal vælge en skærmstørrelse.";
+            return false;
+        }
+        if (!UserState.UserId.HasValue)
+        {
+            formError = "Fejl: Kunne ikke identificere bruger. Prøv at logge ind igen.";
+            return false;
+        }
+        // Hvis vi når hertil, er alle tjek bestået.
+        return true;
+    }
+
+    /// <summary>
+    /// Håndterer den fysiske lagring af filer på serveren og opretter referencer i databasen.
+    /// </summary>
+    /// <param name="listingId">ID'et på den annonce, billederne skal knyttes til.</param>
+    private async Task ProcessImagesAsync(int listingId)
+    {
+        // Sammensætter den fulde sti til upload-mappen (f.eks. C:\...\wwwroot\uploads\listings).
+        var uploadPath = Path.Combine(Environment.WebRootPath, "uploads", "listings");
+        // Opretter mappen, hvis den ikke allerede eksisterer.
+        Directory.CreateDirectory(uploadPath);
+
+        // Løber igennem hver fil, brugeren har valgt.
+        foreach (var file in loadedFiles)
+        {
+            // Opretter et unikt filnavn for at undgå, at to filer overskriver hinanden.
+            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            var fullPath = Path.Combine(uploadPath, uniqueFileName);
+
+            // Åbner en stream til filens data (med en størrelsesbegrænsning på 5MB).
+            await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            // Opretter en fil på serverens disk.
+            await using var fs = new FileStream(fullPath, FileMode.Create);
+            // Kopierer data fra den uploadede fil til filen på disken.
+            await stream.CopyToAsync(fs);
+
+            // Kald repository'et for at gemme referencen (det unikke filnavn) i 'listing_images'-tabellen i databasen.
+            await ListingRepo.AddImageAsync(listingId, uniqueFileName);
         }
     }
 }
