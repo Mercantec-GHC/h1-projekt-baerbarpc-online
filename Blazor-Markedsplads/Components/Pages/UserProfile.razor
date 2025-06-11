@@ -48,19 +48,132 @@
                     @switch (activeTab)
                     {
                         case "personal":
-                            @* --- Din HTML for 'personal' fanebladet her --- *@
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-1">Personlige Oplysninger</h5>
+                                    <p class="text-muted small mb-4">Opdater dine personlige oplysninger</p>
+                                    @if (!string.IsNullOrEmpty(profileSuccessMessage))
+                                    {
+                                        <div class="alert alert-success">@profileSuccessMessage</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(profileErrorMessage))
+                                    {
+                                        <div class="alert alert-danger">@profileErrorMessage</div>
+                                    }
+                                    <EditForm Model="profile" OnValidSubmit="SaveProfileAsync">
+                                        <DataAnnotationsValidator />
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Fornavn</label>
+                                                <InputText class="form-control" @bind-Value="profile.FirstName" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Efternavn</label>
+                                                <InputText class="form-control" @bind-Value="profile.LastName" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Email</label>
+                                                <InputText class="form-control" @bind-Value="profile.Email" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Telefonnummer</label>
+                                                <InputText class="form-control" @bind-Value="profile.Phone" />
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small fw-semibold">Adresse</label>
+                                                <InputText class="form-control" @bind-Value="profile.Address" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">By</label>
+                                                <InputText class="form-control" @bind-Value="profile.City" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Postnummer</label>
+                                                <InputText class="form-control" @bind-Value="profile.Zip" />
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-end gap-2 mt-4">
+                                            <button type="submit" class="btn btn-primary">Gem Ændringer</button>
+                                        </div>
+                                    </EditForm>
+                                </div>
+                            </div>
                             break;
 
                         case "password":
-                            @* --- Din HTML for 'password' fanebladet her --- *@
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-1">Skift Adgangskode</h5>
+                                    <p class="text-muted small mb-4">Indtast og bekræft din nye adgangskode.</p>
+                                    <EditForm Model="passwordModel" OnValidSubmit="HandlePasswordChangeAsync">
+                                        <DataAnnotationsValidator />
+                                        @if (!string.IsNullOrEmpty(passwordSuccessMessage))
+                                        {
+                                            <div class="alert alert-success">@passwordSuccessMessage</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(passwordErrorMessage))
+                                        {
+                                            <div class="alert alert-danger">@passwordErrorMessage</div>
+                                        }
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Ny Adgangskode</label>
+                                            <InputText type="password" class="form-control" @bind-Value="passwordModel.NewPassword" />
+                                            <ValidationMessage For="@(() => passwordModel.NewPassword)" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Bekræft Ny Adgangskode</label>
+                                            <InputText type="password" class="form-control" @bind-Value="passwordModel.ConfirmPassword" />
+                                            <ValidationMessage For="@(() => passwordModel.ConfirmPassword)" />
+                                        </div>
+                                        <div class="d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-primary">Gem ny adgangskode</button>
+                                        </div>
+                                    </EditForm>
+                                </div>
+                            </div>
                             break;
 
                         case "active-ads":
-                            @* --- Din HTML for 'active-ads' fanebladet her --- *@
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body p-4">
+                                    <h5 class="fw-bold mb-1">Mine Aktive Annoncer</h5>
+                                    <p class="text-muted small mb-4">Oversigt over dine nuværende annoncer.</p>
+                                    @if (!string.IsNullOrEmpty(listingsError))
+                                    {
+                                        <div class="alert alert-danger">@listingsError</div>
+                                    }
+                                    else if (userListings.Any())
+                                    {
+                                        <ul class="list-group list-group-flush">
+                                            @foreach (var ad in userListings)
+                                            {
+                                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    <div>
+                                                        <a href="/ListingDetailsPage/@ad.Id" class="fw-semibold">@ad.Title</a>
+                                                        <small class="d-block text-muted">@ad.Brand @ad.Model - @ad.Price.ToString("N0") kr.</small>
+                                                    </div>
+                                                    <div>
+                                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditAd(ad.Id)">Rediger</button>
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteAdAsync(ad.Id)">Slet</button>
+                                                    </div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <p>Du har ingen aktive annoncer. <a href="/CreateListing">Opret en nu!</a></p>
+                                    }
+                                </div>
+                            </div>
                             break;
 
                         default:
-                            <p>Vælg venligst en kategori fra menuen til venstre.</p>
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body p-4">
+                                    <p>Vælg venligst en kategori fra menuen til venstre.</p>
+                                </div>
+                            </div>
                             break;
                     }
                 }
@@ -138,7 +251,7 @@
             currentUser = await UserRepo.GetByIdAsync(userId);
             if (currentUser != null)
             {
-                // Hvis brugeren findes, udfyld formularen med brugerens data og hent brugerens annoncer.
+                // Bruger fundet, udfyld formularen med brugerens data og hent brugerens annoncer.
                 PopulateProfileModel(currentUser);
                 await LoadUserListingsAsync(currentUser.Id);
             }
@@ -179,7 +292,7 @@
     private void SetActiveTab(string tabName)
     {
         activeTab = tabName;
-        // Nulstil alle feedback-beskeder for en ren brugeroplevelse, når der skiftes fane.
+        // Nulstil fejlbeskeder når man skifter faneblad for en renere oplevelse
         profileSuccessMessage = profileErrorMessage = passwordSuccessMessage = passwordErrorMessage = null;
     }
 
