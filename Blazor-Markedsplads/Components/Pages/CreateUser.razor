@@ -140,28 +140,20 @@
     /// </summary>
     private async Task HandleRegistrationAsync()
     {
-        // Nulstil fejlbeskeder for at fjerne gamle fejl fra UI'et.
         formError = string.Empty;
-
-        // Kør vores egne, manuelle valideringstjek.
         if (IsFormValid())
         {
             try
             {
                 // Kald helper-metoden, der rent faktisk opretter brugeren i databasen.
                 await CreateUserInDatabaseAsync();
-
-                // Sæt flaget til true. Dette signalerer til 'OnAfterRenderAsync',
                 // at den skal udføre login- og navigationslogikken.
                 userJustCreated = true;
-
                 // Fortæl Blazor, at komponentens state er ændret, så den ved, den skal gen- rendere.
                 StateHasChanged();
             }
             catch (Exception ex)
             {
-                // Her fanger vi fejl fra databasen. Den mest almindelige vil være, hvis en email allerede er i brug.
-                // Vi tjekker, om fejlbeskeden indeholder navnet på vores unikke database-constraint ('users_email_key').
                 formError = ex.Message.Contains("duplicate key value violates unique constraint \"users_email_key\"")
                     ? "En bruger med denne email findes allerede." // Brugervenlig besked.
                     : $"Kunne ikke oprette bruger: {ex.Message}"; // Generisk besked for andre fejl.

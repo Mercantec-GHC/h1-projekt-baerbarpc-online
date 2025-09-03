@@ -9,9 +9,6 @@
     /// </summary>
     public class UserStateService
     {
-        // ------------------- PROPERTIES (State) -------------------
-        // Properties holder den delte tilstand.
-
         /// <summary>
         /// Holder styr på, om en bruger er logget ind. Kan læses af alle, men kan kun ændres indefra denne klasse.
         /// </summary>
@@ -24,7 +21,7 @@
         public int? UserId { get; private set; }
 
         // ------------------- EVENT -------------------
-        // Et event fungerer som et meddelelsessystem eller en "broadcast-signal".
+
 
         /// <summary>
         /// Et event, som andre dele af applikationen (f.eks. MainLayout.razor) kan abonnere på.
@@ -32,9 +29,6 @@
         /// så de kan opdatere deres UI. Dette er kernen i Observer-designmønsteret.
         /// </summary>
         public event Action? OnChange;
-
-        // ------------------- PUBLIC METHODS -------------------
-        // Offentlige metoder, som andre dele af koden kan kalde.
 
         /// <summary>
         /// Kaldes fra Login.razor efter en succesfuld login-verificering.
